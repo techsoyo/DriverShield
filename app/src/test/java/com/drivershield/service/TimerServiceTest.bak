@@ -1,0 +1,201 @@
+package com.drivershield.service
+
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.setMain
+import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
+import java.util.Locale
+import java.util.concurrent.TimeUnit
+
+@OptIn(ExperimentalCoroutinesApi::class)
+class `TimerServiceTest.tk.bak` {
+
+    private val testDispatcher = StandardTestDispatcher()
+    private val testScope = TestScope(testDispatcher)
+
+    @BeforeEach
+    fun setup() {
+        Dispatchers.setMain(testDispatcher)
+    }
+
+    @AfterEach
+    fun tearDown() {
+        testScope.cancel()
+    }
+
+    @Test
+    fun `GIVEN start epoch WHEN calculating elapsed THEN result is exact`() = runTest {
+        val startEpoch = 1_000_000L
+        val simulatedNow = startEpoch + 5_000L
+
+        val elapsed = simulatedNow - startEpoch
+
+        assertEquals(5_000L, elapsed)
+    }
+
+    @Test
+    fun `GIVEN 1 hour shift WHEN converting to HHmmss THEN format is correct`() {
+        val oneHourMs = 60L * 60 * 1000
+
+        val hours = java.util.concurrent.TimeUnit.MILLISECONDS.toHours(oneHourMs)
+        val minutes = java.util.concurrent.TimeUnit.MILLISECONDS.toMinutes(oneHourMs) % 60
+        val seconds = java.util.concurrent.TimeUnit.MILLISECONDS.toSeconds(oneHourMs) % 60
+        val formatted = String.format(Locale.US, "%02d:%02d:%02d", hours, minutes, seconds)
+
+        assertEquals("01:00:00", formatted)
+    }
+
+    @Test
+    fun `GIVEN 8 hour shift WHEN converting to HHmmss THEN format is correct`() {
+        val eightHoursMs = 8L * 60 * 60 * 1000
+
+        val hours = java.util.concurrent.TimeUnit.MILLISECONDS.toHours(eightHoursMs)
+        val minutes = java.util.concurrent.TimeUnit.MILLISECONDS.toMinutes(eightHoursMs) % 60
+        val seconds = java.util.concurrent.TimeUnit.MILLISECONDS.toSeconds(eightHoursMs) % 60
+        val formatted = String.format(Locale.US, "%02d:%02d:%02d", hours, minutes, seconds)
+
+        assertEquals("08:00:00", formatted)
+    }
+
+    @Test
+    fun `GIVEN 40 hour week WHEN converting THEN format is correct`() {
+        val fortyHoursMs = 40L * 60 * 60 * 1000
+
+        val hours = java.util.concurrent.TimeUnit.MILLISECONDS.toHours(fortyHoursMs)
+        val minutes = java.util.concurrent.TimeUnit.MILLISECONDS.toMinutes(fortyHoursMs) % 60
+
+        assertEquals(40L, hours)
+        assertEquals(0L, minutes)
+    }
+
+    @Test
+    fun `GIVEN elapsed time with seconds WHEN formatting THEN all fields correct`() {
+        val elapsedMs = 3L * 60 * 60 * 1000 + 42 * 60 * 1000 + 17 * 1000
+
+        val hours = java.util.concurrent.TimeUnit.MILLISECONDS.toHours(elapsedMs)
+        val minutes = java.util.concurrent.TimeUnit.MILLISECONDS.toMinutes(elapsedMs) % 60
+        val seconds = java.util.concurrent.TimeUnit.MILLISECONDS.toSeconds(elapsedMs) % 60
+        val formatted = String.format(Locale.US, "%02d:%02d:%02d", hours, minutes, seconds)
+
+        assertEquals("03:42:17", formatted)
+    }
+
+    @Test
+    fun `GIVEN zero elapsed WHEN formatting THEN shows 00:00:00`() {
+        val elapsedMs = 0L
+
+        val hours = java.util.concurrent.TimeUnit.MILLISECONDS.toHours(elapsedMs)
+        val minutes = java.util.concurrent.TimeUnit.MILLISECONDS.toMinutes(elapsedMs) % 60
+        val seconds = java.util.concurrent.TimeUnit.MILLISECONDS.toSeconds(elapsedMs) % 60
+        val formatted = String.format(Locale.US, "%02d:%02d:%02d", hours, minutes, seconds)
+
+        assertEquals("00:00:00", formatted)
+    }
+
+    @Test
+    fun `GIVEN 23h 59m 59s WHEN formatting THEN shows correct time`() {
+        val elapsedMs = 23L * 60 * 60 * 1000 + 59 * 60 * 1000 + 59 * 1000
+
+        val hours = java.util.concurrent.TimeUnit.MILLISECONDS.toHours(elapsedMs)
+        val minutes = java.util.concurrent.TimeUnit.MILLISECONDS.toMinutes(elapsedMs) % 60
+        val seconds = java.util.concurrent.TimeUnit.MILLISECONDS.toSeconds(elapsedMs) % 60
+        val formatted = String.format(Locale.US, "%02d:%02d:%02d", hours, minutes, seconds)
+
+        assertEquals("23:59:59", formatted)
+    }
+
+    @Test
+    fun `GIVEN drift scenario WHEN using absolute epoch THEN no accumulated error`() = runTest {
+        val startEpoch = 1_000_000L
+
+        val elapsed1 = 1_001_000L - startEpoch
+        val elapsed2 = 1_002_000L - startEpoch
+        val elapsed3 = 1_010_000L - startEpoch
+
+        assertEquals(1_000L, elapsed1)
+        assertEquals(2_000L, elapsed2)
+        assertEquals(10_000L, elapsed3)
+
+        val directCalculation = 1_010_000L - startEpoch
+        assertEquals(elapsed3, directCalculation)
+    }
+
+    @Test
+    fun `GIVEN cumulative approach WHEN simulating drift THEN error accumulates`() = runTest {
+        var cumulativeMs = 0L
+        val iterations = 1000
+        val driftPerIteration = 2L
+
+        repeat(iterations) {
+            cumulativeMs += 1_000L + driftPerIteration
+        }
+
+        val expectedWithoutDrift = iterations * 1_000L
+        val actualWithDrift = cumulativeMs
+        val driftError = actualWithDrift - expectedWithoutDrift
+
+        assertEquals(2_000L, driftError)
+        assertTrue(driftError > 0)
+    }
+
+    @Test
+    fun `GIVEN absolute epoch approach WHEN simulating same scenario THEN zero drift`() = runTest {
+        val startEpoch = 1_000_000L
+        val iterations = 1000
+        val driftPerIteration = 2L
+
+        var lastElapsed = 0L
+        repeat(iterations) { i ->
+            val simulatedNow = startEpoch + (i + 1) * 1_000L
+            lastElapsed = simulatedNow - startEpoch
+        }
+
+        val expected = iterations * 1_000L
+        assertEquals(expected, lastElapsed)
+    }
+
+    @Test
+    fun `GIVEN TimerState initial WHEN created THEN values are zero`() {
+        val state = TimerState()
+
+        assertEquals(0L, state.elapsedMs)
+        assertFalse(state.isRunning)
+        assertEquals(0L, state.startEpoch)
+    }
+
+    @Test
+    fun `GIVEN legal limits WHEN converting ms to hours THEN values are exact`() {
+        val maxDailyMs = 8L * 60 * 60 * 1000
+        val minRestMs = 4L * 60 * 60 * 1000
+        val maxWeeklyMs = 40L * 60 * 60 * 1000
+        val warn4hMs = 4L * 60 * 60 * 1000
+        val warn6hMs = 6L * 60 * 60 * 1000
+
+        assertEquals(8L, java.util.concurrent.TimeUnit.MILLISECONDS.toHours(maxDailyMs))
+        assertEquals(4L, java.util.concurrent.TimeUnit.MILLISECONDS.toHours(minRestMs))
+        assertEquals(40L, java.util.concurrent.TimeUnit.MILLISECONDS.toHours(maxWeeklyMs))
+        assertEquals(4L, java.util.concurrent.TimeUnit.MILLISECONDS.toHours(warn4hMs))
+        assertEquals(6L, java.util.concurrent.TimeUnit.MILLISECONDS.toHours(warn6hMs))
+    }
+
+    @Test
+    fun `GIVEN service constants WHEN checked THEN values are reasonable`() {
+        assertEquals("timer_service_channel", TimerService.CHANNEL_ID)
+        assertEquals(1001, TimerService.NOTIFICATION_ID)
+        assertEquals("com.drivershield.ACTION_START", TimerService.ACTION_START)
+        assertEquals("com.drivershield.ACTION_STOP", TimerService.ACTION_STOP)
+        assertEquals("extra_start_epoch", TimerService.EXTRA_START_EPOCH)
+    }
+}

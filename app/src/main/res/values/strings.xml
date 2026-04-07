@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">DriverShield</string>
+
+    <!-- Dashboard -->
+    <string name="dashboard_title">Panel principal</string>
+    <string name="start_shift">Iniciar turno</string>
+    <string name="end_shift">Finalizar turno</string>
+    <string name="shift_active">Turno en curso</string>
+    <string name="hold_to_confirm">Mantén pulsado para confirmar</string>
+
+    <!-- Tipos de turno -->
+    <string name="shift_type_normal">Normal</string>
+    <string name="shift_type_extended">Ampliado</string>
+    <string name="shift_type_night">Nocturno</string>
+    <string name="shift_type_split">Partido</string>
+
+    <!-- Historial -->
+    <string name="history_title">Historial</string>
+    <string name="history_empty">No hay turnos registrados</string>
+
+    <!-- Calendario -->
+    <string name="calendar_title">Calendario</string>
+    <string name="weekly_summary">Resumen semanal</string>
+
+    <!-- Notificaciones -->
+    <string name="notification_channel_name">Turno activo</string>
+    <string name="notification_timer_title">DriverShield – Turno activo</string>
+    <string name="notification_timer_text">Cronómetro en marcha</string>
+
+    <!-- Alertas legales -->
+    <string name="alert_8h_warning">Llevas 8 horas conduciendo. Considera un descanso.</string>
+    <string name="alert_9h_exceeded">Has superado el límite diario de 9 horas.</string>
+    <string name="alert_10h_exceeded">Has superado el límite ampliado de 10 horas.</string>
+
+    <!-- Errores -->
+    <string name="error_generic">Ha ocurrido un error inesperado</string>
+    <string name="error_shift_not_found">No se encontró el turno</string>
+</resources>

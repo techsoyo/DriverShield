@@ -1,0 +1,11 @@
+
+
+Arquitectura Android moderna (MVVM, Clean Architecture).
+
+Persistencia con Room Database y Kotlin Coroutines.
+
+Gestión de fechas con java.time (LocalDate, LocalDateTime, Duration).
+
+Generación de reportes PDF/CSV en entornos Android.
+
+Diseño de interfaces con Jetpack Compose (para el calendario dinámico).

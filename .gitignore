@@ -1,0 +1,55 @@
+# --- ANDROID & KOTLIN ---
+*.iml
+.gradle
+/local.properties
+/.idea/caches
+/.idea/libraries
+/.idea/modules.xml
+/.idea/workspace.xml
+/.idea/navEditor.xml
+/.idea/assetWizardSettings.xml
+.DS_Store
+
+# --- BUILD OUTPUT ---
+/build
+/app/build
+/captures
+.externalNativeBuild
+.cxx
+
+# --- SECURITY & SECRETS (CRÍTICO) ---
+# Nunca subir llaves de firma ni credenciales de servicios
+*.jks
+*.keystore
+*.p12
+google-services.json
+
+# --- DATABASE (ROOM / SQLITE) ---
+# Ignorar archivos temporales de la DB durante el testing
+*.db
+*.db-shm
+*.db-wal
+
+# --- VIRTUAL DEVICES & LOGS ---
+*.log
+*.hprof
+.elice
+
+# --- GRADLE SPECIFIC ---
+.gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+!gradle/wrapper/gradle-wrapper.properties
+
+# --- ANDROID STUDIO SPECIFIC ---
+*.iml
+.idea/
+.idea/modules.xml
+.idea/workspace.xml
+.idea/navEditor.xml
+.idea/assetWizardSettings.xml
+.idea/caches
+.idea/libraries
+captures/
+.externalNativeBuild/
+.cxx/

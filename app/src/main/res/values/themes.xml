@@ -1,0 +1,4 @@
+<resources>
+    <style name="Theme.DriverShield" parent="Theme.AppCompat.Light.NoActionBar">
+    </style>
+</resources>
