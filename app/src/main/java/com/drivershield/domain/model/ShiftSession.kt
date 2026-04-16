@@ -7,6 +7,8 @@ data class ShiftSession(
     val type: ShiftType = ShiftType.NORMAL,
     val startTime: Instant = Instant.now(),
     val endTime: Instant? = null,
+    val isoWeek: Int = 0,
+    val isoYear: Int = 0,
     val notes: String = ""
 ) {
     val isActive: Boolean get() = endTime == null

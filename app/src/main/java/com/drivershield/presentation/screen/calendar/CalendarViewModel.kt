@@ -19,6 +19,7 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.temporal.WeekFields
+import java.time.temporal.TemporalAdjusters
 import javax.inject.Inject
 
 enum class DayStatus { GREEN_POINT, ORANGE_POINT }
@@ -54,9 +55,11 @@ data class CalendarUiState(
 
 private data class ConfigState(
     val offDays: List<Int>,
+    val alternateOffDays: List<Int>,
+    val weeksToRotate: Int,
     val startHour: Int,
     val endHour: Int,
-    val cycleStartEpoch: Long
+    val nextAltReference: Long
 )
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -79,13 +82,25 @@ class CalendarViewModel @Inject constructor(
     }
 
     private val _configFlow = combine(
-        sessionDataStore.offDays,
+        combine(
+            sessionDataStore.offDays,
+            sessionDataStore.alternateOffDays,
+            sessionDataStore.weeksToRotate
+        ) { offDays, altDays, weeks -> Triple(offDays, altDays, weeks) },
         sessionDataStore.startHour,
         sessionDataStore.endHour,
-        scheduleRepository.getScheduleFlow()
-    ) { offDays, startHour, endHour, schedule ->
-        ConfigState(offDays, startHour, endHour, schedule?.cycleStartEpoch ?: 0L)
-    }
+        scheduleRepository.getScheduleFlow(),
+        sessionDataStore.nextAltReference
+    ) { offConfig, startHour, endHour, _, nextAltRef ->
+        ConfigState(
+            offDays = offConfig.first,
+            alternateOffDays = offConfig.second,
+            weeksToRotate = offConfig.third,
+            startHour = startHour,
+            endHour = endHour,
+            nextAltReference = nextAltRef
+        )
+    }.distinctUntilChanged()
 
     val uiState: StateFlow<CalendarUiState> = combine(_configFlow, _selectedPage) { config, page ->
         config to page
@@ -101,12 +116,14 @@ class CalendarViewModel @Inject constructor(
                     buildCalendarState(
                         dayReports = dayReports,
                         userOffDays = config.offDays,
+                        alternateOffDays = config.alternateOffDays,
+                        weeksToRotate = config.weeksToRotate,
+                        nextAltReference = config.nextAltReference,
                         weekStart = weekStart,
                         currentIsoYear = isoYear,
                         currentWeekNumber = weekNumber,
                         configStartHour = config.startHour,
-                        configEndHour = config.endHour,
-                        cycleStartEpoch = config.cycleStartEpoch
+                        configEndHour = config.endHour
                     )
                 }
             }
@@ -125,19 +142,24 @@ class CalendarViewModel @Inject constructor(
     private fun buildCalendarState(
         dayReports: List<DayReport>,
         userOffDays: List<Int>,
+        alternateOffDays: List<Int>,
+        weeksToRotate: Int,
+        nextAltReference: Long,
         weekStart: LocalDate,
         currentIsoYear: Int,
         currentWeekNumber: Int,
         configStartHour: Int,
-        configEndHour: Int,
-        cycleStartEpoch: Long
+        configEndHour: Int
     ): CalendarUiState {
+        val refDate: LocalDate? = if (nextAltReference > 0L)
+            LocalDate.ofEpochDay(nextAltReference / 86_400_000L)
+        else null
 
         val weekDays = (0..6).map { dayOffset ->
             val date = weekStart.plusDays(dayOffset.toLong())
             val dayOfWeek = dayOffset + 1
 
-            val isLibranzaDay = CycleCalculator.isOffDay(date, cycleStartEpoch, userOffDays)
+            val isLibranzaDay = CycleCalculator.isOffDay(date, refDate, userOffDays.toSet(), alternateOffDays.toSet(), weeksToRotate)
 
             val daySessions = dayReports
                 .filter { it.date == date }

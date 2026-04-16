@@ -1,5 +1,6 @@
 package com.drivershield.presentation.screen.main
 
+import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CalendarMonth
@@ -8,6 +9,8 @@ import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.ui.res.stringResource
+import com.drivershield.R
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -24,12 +27,12 @@ import com.drivershield.presentation.screen.schedule.ScheduleScreen
 import com.drivershield.presentation.theme.DriverShieldColors
 import kotlinx.coroutines.launch
 
-sealed class Screen(val route: String, val title: String, val icon: ImageVector?) {
-    data object Main : Screen("main", "Dashboard", Icons.Default.Home)
-    data object Calendar : Screen("calendar", "Calendario", Icons.Default.CalendarMonth)
-    data object History : Screen("history", "Historial", Icons.Default.History)
-    data object Schedule : Screen("schedule", "Configuración", Icons.Default.Schedule)
-    data object Export : Screen("export", "Exportar", Icons.Default.FileDownload)
+sealed class Screen(val route: String, @StringRes val titleRes: Int, val icon: ImageVector?) {
+    data object Main : Screen("main", R.string.screen_dashboard, Icons.Default.Home)
+    data object Calendar : Screen("calendar", R.string.calendar_title, Icons.Default.CalendarMonth)
+    data object History : Screen("history", R.string.history_title, Icons.Default.History)
+    data object Schedule : Screen("schedule", R.string.screen_schedule, Icons.Default.Schedule)
+    data object Export : Screen("export", R.string.screen_export, Icons.Default.FileDownload)
 
     companion object {
         val allScreens = listOf(Main, Calendar, History, Schedule, Export)
@@ -60,7 +63,7 @@ fun DriverShieldApp() {
 
                 Screen.allScreens.forEach { item: Screen ->
                     NavigationDrawerItem(
-                        label = { Text(text = item.title) },
+                        label = { Text(text = stringResource(item.titleRes)) },
                         selected = (navController.currentDestination?.route == item.route),
                         onClick = {
                             scope.launch { drawerState.close() }
@@ -76,7 +79,7 @@ fun DriverShieldApp() {
                         },
                         icon = {
                             item.icon?.let { iconVector: ImageVector ->
-                                Icon(imageVector = iconVector, contentDescription = item.title)
+                                Icon(imageVector = iconVector, contentDescription = stringResource(item.titleRes))
                             }
                         },
                         colors = NavigationDrawerItemDefaults.colors(
@@ -95,12 +98,12 @@ fun DriverShieldApp() {
                 TopAppBar(
                     title = {
                         val currentRoute = navController.currentDestination?.route
-                        val displayTitle = Screen.allScreens.find { it.route == currentRoute }?.title ?: "DriverShield"
-                        Text(text = displayTitle, fontWeight = FontWeight.Bold)
+                        val titleRes = Screen.allScreens.find { it.route == currentRoute }?.titleRes ?: R.string.app_name
+                        Text(text = stringResource(titleRes), fontWeight = FontWeight.Bold)
                     },
                     navigationIcon = {
                         IconButton(onClick = { scope.launch { drawerState.open() } }) {
-                            Icon(imageVector = Icons.Default.Menu, contentDescription = "Abrir menú")
+                            Icon(imageVector = Icons.Default.Menu, contentDescription = stringResource(R.string.cd_open_menu))
                         }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(

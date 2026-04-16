@@ -28,6 +28,7 @@ REGLA 3 — BATTERY FIRST
 REGLA 4 — ZERO EXTERNAL HEAVY LIBS
   PROHIBIDO: Rx Java, Gson, Glide, OkHttp, Retrofit, Firebase (salvo orden explícita).
   PERMITIDO: Kotlin Stdlib, Jetpack BOM, Hilt, kotlinx.serialization, Turbine (tests).
+  APROBADO EXPLÍCITAMENTE (Director, 2026-04-16): iText7 (kernel + layout + io) — exclusivamente para exportación PDF en domain/export/PdfExporter.kt.
 
 REGLA 5 — STRICT KOTLIN TYPING
   Sin `Any`, sin `!!`, sin `lateinit` no justificado.

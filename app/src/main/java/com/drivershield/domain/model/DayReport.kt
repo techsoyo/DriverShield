@@ -21,6 +21,8 @@ data class DayReport(
 
 data class SessionReport(
     val sessionId: Long,
+    val startTimestamp: Long,
+    val endTimestamp: Long?,
     val events: List<TimelineEvent>,
     val totalWorkMs: Long,
     val totalRestMs: Long,

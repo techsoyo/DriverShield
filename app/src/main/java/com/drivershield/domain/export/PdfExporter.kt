@@ -1,6 +1,7 @@
 package com.drivershield.domain.export
 
 import android.content.Context
+import com.drivershield.R
 import com.drivershield.domain.model.DayReport
 import com.drivershield.domain.model.DriverProfile
 import com.drivershield.domain.util.WorkLimits
@@ -57,13 +58,13 @@ object PdfExporter {
 
         // ── Cabecera del documento ────────────────────────────────────────
         document.add(
-            Paragraph("DriverShield · Informe de Jornada")
+            Paragraph(context.getString(R.string.pdf_title))
                 .setBold().setFontSize(18f)
                 .setTextAlignment(TextAlignment.CENTER)
                 .setMarginBottom(2f)
         )
         document.add(
-            Paragraph("Generado: $genDate   ·   Período: ${fmt(rangeStart)} – ${fmt(rangeEnd)}")
+            Paragraph(context.getString(R.string.pdf_generated_line, genDate, fmt(rangeStart), fmt(rangeEnd)))
                 .setFontSize(9f).setTextAlignment(TextAlignment.CENTER)
                 .setFontColor(DeviceRgb(100, 100, 100))
                 .setMarginBottom(14f)
@@ -94,7 +95,7 @@ object PdfExporter {
 
             // Título de semana
             document.add(
-                Paragraph("Semana ${fmt(monday)} – ${fmt(sunday)}")
+                Paragraph(context.getString(R.string.pdf_week_range, fmt(monday), fmt(sunday)))
                     .setBold().setFontSize(11f)
                     .setFontColor(COLOR_WEEK_TITLE)
                     .setMarginTop(10f).setMarginBottom(4f)
@@ -105,8 +106,14 @@ object PdfExporter {
                 .setWidth(UnitValue.createPercentValue(100f))
                 .setMarginBottom(6f)
 
-            listOf("Fecha", "Día", "Trabajo", "Descanso", "Progresivo", "Alertas")
-                .forEach { table.addHeaderCell(headerCell(it)) }
+            listOf(
+                context.getString(R.string.pdf_col_date),
+                context.getString(R.string.pdf_col_day),
+                context.getString(R.string.pdf_col_work),
+                context.getString(R.string.pdf_col_rest),
+                context.getString(R.string.pdf_col_progressive),
+                context.getString(R.string.pdf_col_alerts)
+            ).forEach { table.addHeaderCell(headerCell(it)) }
 
             var weekAccumulatedMs = 0L
             weekDays.sortedBy { it.date }.forEach { report ->
@@ -127,9 +134,9 @@ object PdfExporter {
                     .replaceFirstChar { it.uppercase() }
 
                 val alertText = buildString {
-                    if (isSunday) append("CIERRE")
-                    if (hasWorkExcess) { if (isNotEmpty()) append(" | "); append("EXC.JORNADA") }
-                    if (hasRestExcess) { if (isNotEmpty()) append(" | "); append("EXC.DESCANSO") }
+                    if (isSunday) append(context.getString(R.string.pdf_label_cierre))
+                    if (hasWorkExcess) { if (isNotEmpty()) append(" | "); append(context.getString(R.string.pdf_label_exc_jornada)) }
+                    if (hasRestExcess) { if (isNotEmpty()) append(" | "); append(context.getString(R.string.pdf_label_exc_descanso)) }
                 }
 
                 table.addCell(dataCell(fmt(report.date), bgColor, if (isSunday) 9f else 10f, isSunday))
@@ -146,7 +153,7 @@ object PdfExporter {
             val totalWork = weekDays.sumOf { it.totalWorkMs }
             val totalRest = weekDays.sumOf { it.totalRestMs }
             val totalBg = DeviceRgb(210, 210, 210)
-            table.addCell(totalCell("TOTAL SEMANA", totalBg, 3))
+            table.addCell(totalCell(context.getString(R.string.pdf_total_week), totalBg, 3))
             table.addCell(totalCell(fmtMs(totalWork), totalBg, 1))
             table.addCell(totalCell(fmtMs(totalRest), totalBg, 1))
             table.addCell(totalCell("", totalBg, 1))
@@ -157,7 +164,7 @@ object PdfExporter {
         // ── Hash de verificación (SHA-256 truncado a 16 chars) ────────────
         val hash = sha256(hashInput.toString()).take(16).uppercase()
         document.add(
-            Paragraph("Hash de verificación: $hash   ·   DriverShield v1.0")
+            Paragraph(context.getString(R.string.pdf_hash_line, hash))
                 .setFontSize(7f)
                 .setTextAlignment(TextAlignment.CENTER)
                 .setFontColor(DeviceRgb(150, 150, 150))

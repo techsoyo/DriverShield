@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.drivershield.data.local.datastore.SessionDataStore
 import com.drivershield.domain.model.EventType
 import com.drivershield.domain.model.ShiftType
 import com.drivershield.domain.model.WorkSchedule
@@ -38,7 +39,8 @@ data class MainUiState(
 class MainViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
     private val shiftRepository: ShiftRepository,
-    scheduleRepository: ScheduleRepository
+    scheduleRepository: ScheduleRepository,
+    sessionDataStore: SessionDataStore
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(MainUiState())
@@ -50,6 +52,27 @@ class MainViewModel @Inject constructor(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5_000),
             initialValue = null
+        )
+
+    val alternateOffDays: StateFlow<List<Int>> = sessionDataStore.alternateOffDays
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5_000),
+            initialValue = emptyList()
+        )
+
+    val weeksToRotate: StateFlow<Int> = sessionDataStore.weeksToRotate
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5_000),
+            initialValue = 5
+        )
+
+    val nextAltReference: StateFlow<Long> = sessionDataStore.nextAltReference
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5_000),
+            initialValue = 0L
         )
 
     init {

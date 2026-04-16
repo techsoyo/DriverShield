@@ -1,55 +1,50 @@
-# --- ANDROID & KOTLIN ---
-*.iml
-.gradle
-/local.properties
-/.idea/caches
-/.idea/libraries
-/.idea/modules.xml
-/.idea/workspace.xml
-/.idea/navEditor.xml
-/.idea/assetWizardSettings.xml
-.DS_Store
+# ============================================================
+# .gitignore — DriverShield Android Project
+# Generado: 2026-04-16
+# ============================================================
 
-# --- BUILD OUTPUT ---
-/build
-/app/build
-/captures
-.externalNativeBuild
-.cxx
-
-# --- SECURITY & SECRETS (CRÍTICO) ---
-# Nunca subir llaves de firma ni credenciales de servicios
-*.jks
-*.keystore
-*.p12
-google-services.json
-
-# --- DATABASE (ROOM / SQLITE) ---
-# Ignorar archivos temporales de la DB durante el testing
-*.db
-*.db-shm
-*.db-wal
-
-# --- VIRTUAL DEVICES & LOGS ---
-*.log
-*.hprof
-.elice
-
-# --- GRADLE SPECIFIC ---
+# ── Gradle ──────────────────────────────────────────────────
 .gradle/
 build/
 !gradle/wrapper/gradle-wrapper.jar
 !gradle/wrapper/gradle-wrapper.properties
 
-# --- ANDROID STUDIO SPECIFIC ---
+# ── Módulos de build ────────────────────────────────────────
+/app/build/
+/captures/
+
+# ── Android Studio / IntelliJ ───────────────────────────────
 *.iml
 .idea/
-.idea/modules.xml
-.idea/workspace.xml
-.idea/navEditor.xml
-.idea/assetWizardSettings.xml
-.idea/caches
-.idea/libraries
-captures/
+local.properties
+
+# ── Artefactos compilados ───────────────────────────────────
+*.apk
+*.aab
+*.ap_
+*.dex
+
+# ── Compilador Kotlin ───────────────────────────────────────
+.kotlin/
+
+# ── NDK / CMake ─────────────────────────────────────────────
 .externalNativeBuild/
 .cxx/
+
+# ── Seguridad y secretos (CRÍTICO — nunca versionar) ────────
+*.jks
+*.keystore
+*.p12
+google-services.json
+
+# ── SQLite / Room (ficheros runtime, no schemas) ─────────────
+*.db
+*.db-shm
+*.db-wal
+
+# ── Logs y volcados ─────────────────────────────────────────
+*.log
+*.hprof
+
+# ── macOS ───────────────────────────────────────────────────
+.DS_Store

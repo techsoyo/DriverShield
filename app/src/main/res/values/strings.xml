@@ -36,4 +36,100 @@
     <!-- Errores -->
     <string name="error_generic">Ha ocurrido un error inesperado</string>
     <string name="error_shift_not_found">No se encontró el turno</string>
+    <string name="error_invalid_date_format">Formato inválido (DD/MM/AAAA)</string>
+    <string name="error_end_before_start">Debe ser posterior a la fecha inicio</string>
+    <string name="error_invalid_time">Hora inválida (00-23 / 00-59)</string>
+    <string name="error_invalid_time_short">Hora inválida</string>
+
+    <!-- Calendario -->
+    <string name="calendar_header_vtc">CALENDARIO SEMANAL VTC</string>
+    <string name="calendar_status_label">ESTADO</string>
+    <string name="calendar_effective_hours">HORAS EFECTIVAS: %1$d / 40h</string>
+    <string name="calendar_go_to_current_week">Ir a semana actual</string>
+    <string name="cd_prev_week">Semana anterior</string>
+    <string name="cd_next_week">Semana siguiente</string>
+
+    <!-- Navegación -->
+    <string name="screen_dashboard">Dashboard</string>
+    <string name="screen_schedule">Configuración</string>
+    <string name="screen_export">Exportar</string>
+    <string name="cd_open_menu">Abrir menú</string>
+
+    <!-- Exportar -->
+    <string name="export_title">Exportar historial</string>
+    <string name="export_subtitle">Introduce el rango de fechas que quieres exportar.</string>
+    <string name="label_start_date">Fecha inicio</string>
+    <string name="label_end_date">Fecha fin</string>
+    <string name="placeholder_date_format">DD/MM/AAAA</string>
+    <string name="btn_export_pdf">Exportar PDF</string>
+    <string name="btn_export_csv">Exportar CSV</string>
+    <string name="export_pdf_description">Documento de presentación a inspector o responsable. Incluye tablas semanales, fila de Cierre del Domingo y hash de verificación.</string>
+    <string name="export_csv_description">Datos crudos para importar en Excel. Incluye timestamps epoch, duration_ms y resumen semanal al pie.</string>
+    <string name="share_pdf_chooser">Compartir informe PDF</string>
+    <string name="share_csv_chooser">Compartir datos CSV</string>
+    <string name="error_generating_pdf">Error al generar el PDF</string>
+    <string name="error_generating_csv">Error al generar el CSV</string>
+
+    <!-- Historial -->
+    <string name="history_select_range">Selecciona un rango de fechas\npara consultar el historial.</string>
+    <string name="history_no_sessions_range">Sin turnos en el rango seleccionado.</string>
+    <string name="history_query_title">Consultar historial</string>
+    <string name="history_query_subtitle">Introduce el rango de fechas a visualizar (día/mes/año):</string>
+    <string name="btn_view_history">Ver historial</string>
+    <string name="btn_cancel">Cancelar</string>
+    <string name="btn_save">Guardar</string>
+    <string name="btn_change">Cambiar</string>
+    <string name="btn_insert">Insertar</string>
+    <string name="btn_execute">Ejecutar</string>
+    <string name="label_work">trabajo</string>
+    <string name="label_rest">descanso</string>
+    <string name="label_current_week">Semana actual</string>
+    <string name="label_week_range">Semana %1$s</string>
+    <string name="label_cierre">CIERRE</string>
+    <string name="label_no_sessions_day">Sin sesiones registradas.</string>
+    <string name="label_active">activo</string>
+    <string name="label_progressive_weekly">Progresivo semanal: %1$s</string>
+    <string name="label_fecha">FECHA</string>
+    <string name="label_tipo">TIPO</string>
+    <string name="label_inicio">INICIO</string>
+    <string name="label_fin">FIN</string>
+    <string name="cd_insert_shift">Insertar turno</string>
+    <string name="cd_weekly_close">Cierre semanal</string>
+    <string name="cd_work_excess">Exceso de jornada</string>
+    <string name="cd_tampered_clock">Reloj Alterado</string>
+    <string name="cd_reopen_shift">Reabrir turno</string>
+    <string name="cd_delete_session">Eliminar sesión</string>
+    <string name="cd_collapse">Colapsar</string>
+    <string name="cd_expand">Expandir</string>
+    <string name="history_adjust_title">Ajuste de registro</string>
+    <string name="history_insert_shift_title">Insertar turno</string>
+    <string name="history_maintenance_title">Mantenimiento de registros</string>
+    <string name="history_maintenance_body">Se aplicará un ajuste de integridad sobre los registros más recientes.</string>
+    <string name="history_maintenance_warning">Esta operación no se puede deshacer.</string>
+
+    <!-- Configuración -->
+    <string name="toast_driver_profile_saved">Datos del conductor guardados</string>
+    <string name="toast_config_saved">Configuración guardada</string>
+    <string name="btn_save_schedule">Guardar Horario</string>
+    <string name="btn_select">Seleccionar</string>
+    <string name="btn_accept">Aceptar</string>
+    <string name="btn_save_driver">Guardar Datos del Conductor</string>
+
+    <!-- PDF Exporter -->
+    <string name="pdf_title">DriverShield · Informe de Jornada</string>
+    <string name="pdf_generated_line">Generado: %1$s   ·   Período: %2$s – %3$s</string>
+    <string name="pdf_driver_name">Conductor: %1$s</string>
+    <string name="pdf_driver_doc">Documento: %1$s</string>
+    <string name="pdf_week_range">Semana %1$s – %2$s</string>
+    <string name="pdf_col_date">Fecha</string>
+    <string name="pdf_col_day">Día</string>
+    <string name="pdf_col_work">Trabajo</string>
+    <string name="pdf_col_rest">Descanso</string>
+    <string name="pdf_col_progressive">Progresivo</string>
+    <string name="pdf_col_alerts">Alertas</string>
+    <string name="pdf_label_cierre">CIERRE</string>
+    <string name="pdf_label_exc_jornada">EXC.JORNADA</string>
+    <string name="pdf_label_exc_descanso">EXC.DESCANSO</string>
+    <string name="pdf_total_week">TOTAL SEMANA</string>
+    <string name="pdf_hash_line">Hash de verificación: %1$s   ·   DriverShield v1.0</string>
 </resources>

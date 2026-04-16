@@ -4,5 +4,6 @@ enum class ShiftType {
     NORMAL,
     EXTENDED,
     NIGHT,
-    SPLIT
+    SPLIT,
+    REST
 }

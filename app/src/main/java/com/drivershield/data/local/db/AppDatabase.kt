@@ -17,6 +17,7 @@ import com.drivershield.data.local.db.entity.WorkScheduleEntity
 import com.drivershield.data.local.db.migration.Migration1
 import com.drivershield.data.local.db.migration.Migration2
 import com.drivershield.data.local.db.migration.Migration3
+import com.drivershield.data.local.db.migration.Migration4
 import androidx.sqlite.db.SupportSQLiteDatabase
 import androidx.room.migration.Migration
 import dagger.Module
@@ -35,7 +36,7 @@ import javax.inject.Singleton
         DayOverrideEntity::class
     ],
     version = 7,
-    exportSchema = false
+    exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {
 
@@ -71,7 +72,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     DATABASE_NAME
                 )
-                .addMigrations(Migration1, Migration2, Migration3, Migration5_6, Migration6_7)
+                .addMigrations(Migration1, Migration2, Migration3, Migration4, Migration5_6, Migration6_7)
                 .build()
                 .also { INSTANCE = it }
             }

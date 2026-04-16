@@ -37,7 +37,8 @@ precisión milimétrica, generación de evidencia inmutable y alertas legales en
 | Testing | JUnit 5 · MockK · Turbine · Robolectric |
 | Build | Gradle Kotlin DSL · KSP · AGP 8.5 |
 | Min SDK | 26 (Android 8.0) |
-| Target SDK | 34 (Android 14) |
+| Compile SDK | 35 (Android 15) |
+| Target SDK | 35 (Android 15) |
 
 ---
 
@@ -45,7 +46,7 @@ precisión milimétrica, generación de evidencia inmutable y alertas legales en
 
 - **Android Studio** Hedgehog (2023.1.1) o superior
 - **JDK 17**
-- **Android SDK** con API 34 instalada
+- **Android SDK** con API 35 instalada
 - Dispositivo o emulador con API ≥ 26
 
 ---

@@ -47,7 +47,7 @@
             android:exported="false" />
 
         <receiver
-            android:name=".service.notification.Week5ReminderReceiver"
+            android:name=".service.notification.RotationReminderReceiver"
             android:exported="false" />
 
         <receiver android:name=".service.notification.AlertReceiver" android:exported="false" />

@@ -19,6 +19,8 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.drivershield.presentation.theme.DriverShieldColors
+import androidx.compose.ui.res.stringResource
+import com.drivershield.R
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -54,7 +56,7 @@ fun CalendarScreen(viewModel: CalendarViewModel = hiltViewModel()) {
                 .padding(8.dp),
             contentAlignment = Alignment.Center
         ) {
-            Text("CALENDARIO SEMANAL VTC", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+            Text(stringResource(R.string.calendar_header_vtc), color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
         }
 
         // 2. Horas Efectivas + barra de navegación semanal
@@ -75,7 +77,7 @@ fun CalendarScreen(viewModel: CalendarViewModel = hiltViewModel()) {
             ) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = "Semana anterior",
+                    contentDescription = stringResource(R.string.cd_prev_week),
                     tint = if (pagerState.currentPage > 0) DriverShieldColors.VtcHeaderBlue
                            else DriverShieldColors.VtcHeaderBlue.copy(alpha = 0.3f)
                 )
@@ -86,7 +88,7 @@ fun CalendarScreen(viewModel: CalendarViewModel = hiltViewModel()) {
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
-                    text = "HORAS EFECTIVAS: ${uiState.totalWeeklyHours.toInt()} / 40h",
+                    text = stringResource(R.string.calendar_effective_hours, uiState.totalWeeklyHours.toInt()),
                     color = DriverShieldColors.VtcHeaderBlue,
                     fontWeight = FontWeight.Bold,
                     fontSize = 14.sp
@@ -97,7 +99,7 @@ fun CalendarScreen(viewModel: CalendarViewModel = hiltViewModel()) {
                         contentPadding = PaddingValues(0.dp)
                     ) {
                         Text(
-                            "Ir a semana actual",
+                            stringResource(R.string.calendar_go_to_current_week),
                             fontSize = 11.sp,
                             color = DriverShieldColors.VtcHeaderBlue
                         )
@@ -115,7 +117,7 @@ fun CalendarScreen(viewModel: CalendarViewModel = hiltViewModel()) {
             ) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                    contentDescription = "Semana siguiente",
+                    contentDescription = stringResource(R.string.cd_next_week),
                     tint = if (pagerState.currentPage < CalendarViewModel.TOTAL_PAGES - 1)
                                DriverShieldColors.VtcHeaderBlue
                            else DriverShieldColors.VtcHeaderBlue.copy(alpha = 0.3f)
@@ -189,7 +191,7 @@ private fun StatusRow(weekDays: List<DayState>) {
                 .padding(4.dp), 
             contentAlignment = Alignment.Center
         ) {
-            Text("ESTADO", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+            Text(stringResource(R.string.calendar_status_label), color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold)
         }
         weekDays.forEach { day ->
             Box(

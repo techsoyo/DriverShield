@@ -62,13 +62,15 @@ interface ShiftDao {
 
     @Query("""
         SELECT SUM(durationMs) FROM shift_sessions
-        WHERE isoYear = :isoYear AND isoWeekNumber = :isoWeekNumber AND type = 'WORK'
+        WHERE isoYear = :isoYear AND isoWeekNumber = :isoWeekNumber
+        AND endTimestamp IS NOT NULL
     """)
     fun getWeeklyWorkMs(isoYear: Int, isoWeekNumber: Int): Flow<Long?>
 
     @Query("""
         SELECT SUM(durationMs) FROM shift_sessions
-        WHERE isoYear = :isoYear AND isoWeekNumber = :isoWeekNumber AND type = 'WORK'
+        WHERE isoYear = :isoYear AND isoWeekNumber = :isoWeekNumber
+        AND endTimestamp IS NOT NULL
     """)
     suspend fun getWeeklyWorkMsSync(isoYear: Int, isoWeekNumber: Int): Long?
 
@@ -95,4 +97,22 @@ interface ShiftDao {
 
     @Query("SELECT * FROM shift_sessions ORDER BY startTimestamp DESC")
     fun getAllSessionsFlow(): Flow<List<ShiftSessionEntity>>
+
+    /**
+     * Gestión de Horas: Eliminar una sesión accidental (como tus IDs 4 y 5).
+     */
+    @Query("DELETE FROM shift_sessions WHERE id = :id")
+    suspend fun deleteById(id: Long)
+
+    /**
+     * Gestión de Horas: Actualización manual desde la UI.
+     */
+    @Update
+    suspend fun updateSession(session: ShiftSessionEntity)
+
+    /**
+     * Gestión de Horas: Función rápida para reabrir un turno cerrado por error.
+     */
+    @Query("UPDATE shift_sessions SET endTimestamp = NULL, durationMs = 0 WHERE id = :id")
+    suspend fun reopenSession(id: Long)
 }

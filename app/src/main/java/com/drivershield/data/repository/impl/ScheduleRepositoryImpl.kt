@@ -39,4 +39,5 @@ class ScheduleRepositoryImpl @Inject constructor(
         dailyTargetMs = dailyTargetMs,
         cycleStartEpoch = cycleStartEpoch
     )
+
 }

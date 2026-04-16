@@ -39,6 +39,12 @@ android {
     }
 }
 
+// Exporta el schema de Room a /app/schemas para seguimiento en git.
+// Requerido por AGENT.md (exportSchema = true en AppDatabase).
+ksp {
+    arg("room.schemaLocation", "$projectDir/schemas")
+}
+
 dependencies {
     // Compose
     implementation(libs.appcompat)
@@ -77,8 +83,8 @@ dependencies {
     androidTestImplementation(libs.androidx.test.junit)
     testImplementation(libs.junit.jupiter.api)
     testRuntimeOnly(libs.junit.jupiter.engine)
+}
 
-    tasks.withType<Test> {
-        useJUnitPlatform()
-    }
+tasks.withType<Test> {
+    useJUnitPlatform()
 }

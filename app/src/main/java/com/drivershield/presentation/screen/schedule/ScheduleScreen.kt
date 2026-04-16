@@ -1,6 +1,5 @@
 package com.drivershield.presentation.screen.schedule
 
-import android.content.Context
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -8,7 +7,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -17,15 +15,19 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDefaults
+import androidx.compose.material3.DatePickerDialog
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -34,16 +36,17 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import java.time.Instant
+import com.drivershield.R
 import java.time.LocalDate
-import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
@@ -56,12 +59,6 @@ fun ScheduleScreen(
 
     var startTime by remember { mutableStateOf(formatHour(uiState.startHour)) }
     var endTime by remember { mutableStateOf(formatHour(uiState.endHour)) }
-    var selectedOffDays by remember { mutableStateOf(uiState.offDays) }
-
-    val cycleStart = uiState.cycleStartEpoch.takeIf { it > 0L }
-        ?.let { Instant.ofEpochMilli(it).atZone(ZoneId.systemDefault()).toLocalDate() }
-    var cycleStartDate by remember { mutableStateOf(cycleStart) }
-
     var driverName by remember { mutableStateOf(uiState.driverProfile.fullName) }
     var driverDni by remember { mutableStateOf(uiState.driverProfile.dni) }
 
@@ -70,12 +67,9 @@ fun ScheduleScreen(
         driverDni = uiState.driverProfile.dni
     }
 
-    LaunchedEffect(uiState.startHour, uiState.endHour, uiState.offDays, uiState.cycleStartEpoch) {
+    LaunchedEffect(uiState.startHour, uiState.endHour) {
         startTime = formatHour(uiState.startHour)
         endTime = formatHour(uiState.endHour)
-        selectedOffDays = uiState.offDays
-        cycleStartDate = uiState.cycleStartEpoch.takeIf { it > 0L }
-            ?.let { Instant.ofEpochMilli(it).atZone(ZoneId.systemDefault()).toLocalDate() }
     }
 
     Column(
@@ -101,7 +95,7 @@ fun ScheduleScreen(
             onDniChange = { driverDni = it },
             onSave = {
                 viewModel.saveDriverProfile(driverName, driverDni)
-                Toast.makeText(context, "Datos del conductor guardados", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, context.getString(R.string.toast_driver_profile_saved), Toast.LENGTH_SHORT).show()
             }
         )
 
@@ -118,23 +112,29 @@ fun ScheduleScreen(
         )
 
         OffDaysSelector(
-            selectedDays = selectedOffDays,
-            onDayToggle = { day ->
-                val newDays = if (selectedOffDays.contains(day)) {
-                    selectedOffDays - day
-                } else {
-                    selectedOffDays + day
-                }
-                selectedOffDays = newDays
-                val startH = startTime.substringBefore(":").toIntOrNull() ?: 8
-                val endH = endTime.substringBefore(":").toIntOrNull() ?: 16
-                viewModel.saveConfigHours(startH, endH, newDays)
-            }
+            title = "Días de libranza fijos",
+            subtitle = "Selecciona días libres semanales (opcional)",
+            selectedDays = uiState.offDays,
+            disabledDays = uiState.alternateOffDays,
+            onDayToggle = { viewModel.toggleFixedOffDay(it) }
         )
 
-        CycleStartPicker(
-            selectedDate = cycleStartDate,
-            onDateSelected = { cycleStartDate = it }
+        OffDaysSelector(
+            title = "Días de libranza alternos",
+            subtitle = "Se alternarán con los días fijos según el ciclo",
+            selectedDays = uiState.alternateOffDays,
+            disabledDays = uiState.offDays,
+            onDayToggle = { viewModel.toggleAlternateOffDay(it) }
+        )
+
+        WeeksToRotateCard(
+            weeks = uiState.weeksToRotate,
+            onWeeksChange = { viewModel.setWeeksToRotate(it) }
+        )
+
+        AltReferenceDateCard(
+            nextAltReference = uiState.nextAltReference,
+            onDateSelected = { viewModel.setNextAltReference(it) }
         )
 
         Button(
@@ -142,22 +142,16 @@ fun ScheduleScreen(
                 val startH = startTime.substringBefore(":").toIntOrNull() ?: 8
                 val endH = endTime.substringBefore(":").toIntOrNull() ?: 16
                 val dailyMs = parseTimeToMs(endTime) - parseTimeToMs(startTime)
-                val cycleEpoch = cycleStartDate
-                    ?.atStartOfDay(ZoneId.systemDefault())
-                    ?.toInstant()
-                    ?.toEpochMilli()
-                    ?: 0L
 
-                viewModel.saveConfigHours(startH, endH, selectedOffDays)
+                viewModel.saveConfigHours(startH, endH)
                 viewModel.saveSchedule(
                     startTime = startTime,
                     endTime = endTime,
-                    offDays = selectedOffDays,
+                    offDays = uiState.offDays,
                     dailyTargetMs = dailyMs.coerceAtLeast(0L),
-                    weeklyTargetMs = dailyMs.coerceAtLeast(0L) * (7 - selectedOffDays.size),
-                    cycleStartEpoch = cycleEpoch
+                    weeklyTargetMs = dailyMs.coerceAtLeast(0L) * (7 - uiState.offDays.size)
                 )
-                Toast.makeText(context, "Configuración guardada", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, context.getString(R.string.toast_config_saved), Toast.LENGTH_SHORT).show()
             },
             modifier = Modifier
                 .fillMaxWidth()
@@ -167,11 +161,125 @@ fun ScheduleScreen(
                 containerColor = MaterialTheme.colorScheme.secondary
             )
         ) {
-            Text("Guardar Horario", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+            Text(stringResource(R.string.btn_save_schedule), fontSize = 16.sp, fontWeight = FontWeight.Bold)
         }
 
         if (uiState.schedule != null) {
-            CurrentScheduleCard(uiState.schedule!!, cycleStartDate)
+            CurrentScheduleCard(
+                schedule = uiState.schedule!!,
+                alternateOffDays = uiState.alternateOffDays,
+                weeksToRotate = uiState.weeksToRotate,
+                nextAltReference = uiState.nextAltReference
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun AltReferenceDateCard(
+    nextAltReference: Long,
+    onDateSelected: (Long) -> Unit
+) {
+    val formatter = remember { DateTimeFormatter.ofPattern("dd/MM/yyyy") }
+    val displayText = if (nextAltReference > 0L) {
+        LocalDate.ofEpochDay(nextAltReference / 86_400_000L).format(formatter)
+    } else {
+        "No configurada"
+    }
+
+    var showDialog by remember { mutableStateOf(false) }
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
+        shape = RoundedCornerShape(12.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text(
+                text = "Fecha de próxima libranza alterna",
+                color = MaterialTheme.colorScheme.onSurface,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Bold
+            )
+            Text(
+                text = "Permite calcular qué semanas son alternas y cuáles fijas",
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                fontSize = 12.sp
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = displayText,
+                    color = if (nextAltReference > 0L)
+                        MaterialTheme.colorScheme.secondary
+                    else
+                        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold
+                )
+                Button(
+                    onClick = { showDialog = true },
+                    shape = RoundedCornerShape(8.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary
+                    )
+                ) {
+                    Text(stringResource(R.string.btn_select), fontSize = 13.sp)
+                }
+            }
+        }
+    }
+
+    if (showDialog) {
+        val datePickerState = rememberDatePickerState(
+            initialSelectedDateMillis = if (nextAltReference > 0L) nextAltReference else null
+        )
+        val amoledColors = DatePickerDefaults.colors(
+            containerColor = Color(0xFF000000),
+            titleContentColor = MaterialTheme.colorScheme.onSurface,
+            headlineContentColor = MaterialTheme.colorScheme.secondary,
+            weekdayContentColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+            subheadContentColor = MaterialTheme.colorScheme.onSurface,
+            navigationContentColor = MaterialTheme.colorScheme.onSurface,
+            yearContentColor = MaterialTheme.colorScheme.onSurface,
+            currentYearContentColor = MaterialTheme.colorScheme.secondary,
+            selectedYearContainerColor = MaterialTheme.colorScheme.secondary,
+            selectedYearContentColor = Color(0xFF000000),
+            dayContentColor = MaterialTheme.colorScheme.onSurface,
+            selectedDayContainerColor = MaterialTheme.colorScheme.secondary,
+            selectedDayContentColor = Color(0xFF000000),
+            todayContentColor = MaterialTheme.colorScheme.secondary,
+            todayDateBorderColor = MaterialTheme.colorScheme.secondary,
+            dayInSelectionRangeContainerColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.2f),
+            dayInSelectionRangeContentColor = MaterialTheme.colorScheme.secondary
+        )
+        DatePickerDialog(
+            onDismissRequest = { showDialog = false },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        datePickerState.selectedDateMillis?.let { onDateSelected(it) }
+                        showDialog = false
+                    }
+                ) { Text(stringResource(R.string.btn_accept), color = MaterialTheme.colorScheme.secondary) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDialog = false }) {
+                    Text(stringResource(R.string.btn_cancel), color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f))
+                }
+            },
+            colors = amoledColors
+        ) {
+            DatePicker(state = datePickerState, colors = amoledColors)
         }
     }
 }
@@ -249,7 +357,10 @@ private fun TimePickerCard(
 
 @Composable
 private fun OffDaysSelector(
+    title: String,
+    subtitle: String,
     selectedDays: List<Int>,
+    disabledDays: List<Int>,
     onDayToggle: (Int) -> Unit
 ) {
     val days = listOf(
@@ -268,14 +379,14 @@ private fun OffDaysSelector(
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Text(
-                text = "Días de libranza fijos",
+                text = title,
                 color = MaterialTheme.colorScheme.onSurface,
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Bold
             )
 
             Text(
-                text = "Selecciona días libres semanales (opcional)",
+                text = subtitle,
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
                 fontSize = 12.sp
             )
@@ -286,26 +397,29 @@ private fun OffDaysSelector(
             ) {
                 days.forEach { (day, label) ->
                     val isSelected = selectedDays.contains(day)
+                    val isDisabled = disabledDays.contains(day)
                     Box(
                         modifier = Modifier
                             .size(44.dp)
                             .background(
-                                color = if (isSelected)
-                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)
-                                else
-                                    MaterialTheme.colorScheme.surfaceVariant,
+                                color = when {
+                                    isDisabled -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+                                    isSelected -> MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)
+                                    else -> MaterialTheme.colorScheme.surfaceVariant
+                                },
                                 shape = RoundedCornerShape(10.dp)
                             )
-                            .clickable { onDayToggle(day) },
+                            .clickable(enabled = !isDisabled) { onDayToggle(day) },
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
                             text = label,
-                            color = if (isSelected)
-                                MaterialTheme.colorScheme.primary
-                            else
-                                MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
-                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                            color = when {
+                                isDisabled -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.25f)
+                                isSelected -> MaterialTheme.colorScheme.primary
+                                else -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                            },
+                            fontWeight = if (isSelected && !isDisabled) FontWeight.Bold else FontWeight.Normal,
                             fontSize = 14.sp
                         )
                     }
@@ -316,12 +430,10 @@ private fun OffDaysSelector(
 }
 
 @Composable
-private fun CycleStartPicker(
-    selectedDate: LocalDate?,
-    onDateSelected: (LocalDate) -> Unit
+private fun WeeksToRotateCard(
+    weeks: Int,
+    onWeeksChange: (Int) -> Unit
 ) {
-    val formatter = DateTimeFormatter.ofPattern("EEEE, d MMMM yyyy", Locale("es"))
-
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
@@ -334,14 +446,14 @@ private fun CycleStartPicker(
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Text(
-                text = "Inicio de ciclo de 5 semanas",
+                text = "Núm. semanas para cambio días libranza",
                 color = MaterialTheme.colorScheme.onSurface,
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Bold
             )
 
             Text(
-                text = "Selecciona un Domingo como inicio. Cada 5 semanas, Domingo y Lunes serán libranza automática.",
+                text = "Cada N semanas se alternarán los días fijos con los días alternos",
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
                 fontSize = 12.sp
             )
@@ -351,43 +463,34 @@ private fun CycleStartPicker(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                Button(
+                    onClick = { if (weeks > 1) onWeeksChange(weeks - 1) },
+                    modifier = Modifier.size(44.dp),
+                    shape = RoundedCornerShape(8.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant
+                    )
+                ) {
+                    Text("-", fontSize = 20.sp)
+                }
+
                 Text(
-                    text = selectedDate?.format(formatter) ?: "Sin definir",
-                    color = if (selectedDate != null)
-                        MaterialTheme.colorScheme.primary
-                    else
-                        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
-                    fontSize = 14.sp
+                    text = "$weeks sem.",
+                    color = MaterialTheme.colorScheme.onSurface,
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center
                 )
 
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Button(
-                        onClick = {
-                            val today = LocalDate.now()
-                            val prevSunday = today.minusDays((today.dayOfWeek.value % 7).toLong())
-                            onDateSelected(prevSunday)
-                        },
-                        modifier = Modifier.height(40.dp),
-                        shape = RoundedCornerShape(8.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceVariant
-                        )
-                    ) {
-                        Text("Domingo actual", fontSize = 11.sp)
-                    }
-
-                    if (selectedDate != null) {
-                        Button(
-                            onClick = { onDateSelected(LocalDate.now()) },
-                            modifier = Modifier.height(40.dp),
-                            shape = RoundedCornerShape(8.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.error.copy(alpha = 0.3f)
-                            )
-                        ) {
-                            Text("Reset", fontSize = 11.sp)
-                        }
-                    }
+                Button(
+                    onClick = { if (weeks < 52) onWeeksChange(weeks + 1) },
+                    modifier = Modifier.size(44.dp),
+                    shape = RoundedCornerShape(8.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant
+                    )
+                ) {
+                    Text("+", fontSize = 20.sp)
                 }
             }
         }
@@ -395,7 +498,13 @@ private fun CycleStartPicker(
 }
 
 @Composable
-private fun CurrentScheduleCard(schedule: com.drivershield.domain.model.WorkSchedule, cycleStartDate: LocalDate?) {
+private fun CurrentScheduleCard(
+    schedule: com.drivershield.domain.model.WorkSchedule,
+    alternateOffDays: List<Int>,
+    weeksToRotate: Int,
+    nextAltReference: Long
+) {
+    val formatter = remember { DateTimeFormatter.ofPattern("dd/MM/yyyy") }
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
@@ -422,18 +531,7 @@ private fun CurrentScheduleCard(schedule: com.drivershield.domain.model.WorkSche
             )
 
             if (schedule.offDays.isNotEmpty()) {
-                val offDayNames = schedule.offDays.map {
-                    when (it) {
-                        1 -> "Lunes"
-                        2 -> "Martes"
-                        3 -> "Miércoles"
-                        4 -> "Jueves"
-                        5 -> "Viernes"
-                        6 -> "Sábado"
-                        7 -> "Domingo"
-                        else -> ""
-                    }
-                }.joinToString(", ")
+                val offDayNames = schedule.offDays.map { dayName(it) }.joinToString(", ")
                 Text(
                     text = "Libranzas fijas: $offDayNames",
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
@@ -441,22 +539,36 @@ private fun CurrentScheduleCard(schedule: com.drivershield.domain.model.WorkSche
                 )
             }
 
-            if (schedule.hasCycle() && cycleStartDate != null) {
-                val formatter = java.time.format.DateTimeFormatter.ofPattern("d MMM yyyy", java.util.Locale("es"))
+            if (alternateOffDays.isNotEmpty()) {
+                val altDayNames = alternateOffDays.map { dayName(it) }.joinToString(", ")
                 Text(
-                    text = "Ciclo 5 semanas: desde ${cycleStartDate.format(formatter)}",
-                    color = MaterialTheme.colorScheme.primary,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Medium
+                    text = "Libranzas alternas: $altDayNames",
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f),
+                    fontSize = 14.sp
                 )
                 Text(
-                    text = "Domingo y Lunes son libranza automática cada 5 semanas",
+                    text = "Rotación cada $weeksToRotate semanas",
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                    fontSize = 12.sp
+                )
+            }
+
+            if (nextAltReference > 0L) {
+                val refDate = LocalDate.ofEpochDay(nextAltReference / 86_400_000L)
+                Text(
+                    text = "Referencia alterna: ${refDate.format(formatter)}",
+                    color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.7f),
                     fontSize = 12.sp
                 )
             }
         }
     }
+}
+
+private fun dayName(day: Int): String = when (day) {
+    1 -> "Lunes"; 2 -> "Martes"; 3 -> "Miércoles"
+    4 -> "Jueves"; 5 -> "Viernes"; 6 -> "Sábado"
+    7 -> "Domingo"; else -> ""
 }
 
 @Composable
@@ -565,7 +677,7 @@ private fun DriverProfileCard(
                     containerColor = MaterialTheme.colorScheme.primary
                 )
             ) {
-                Text("Guardar Datos del Conductor", fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.btn_save_driver), fontSize = 14.sp, fontWeight = FontWeight.Bold)
             }
         }
     }
@@ -573,11 +685,11 @@ private fun DriverProfileCard(
 
 private fun parseTimeToMs(time: String): Long {
     val parts = time.split(":")
-    val hours = parts[0].toIntOrNull() ?: 0
-    val minutes = parts[1].toIntOrNull() ?: 0
+    val hours = parts.getOrNull(0)?.toLongOrNull() ?: 0L
+    val minutes = parts.getOrNull(1)?.toLongOrNull() ?: 0L
     return (hours * 60 + minutes) * 60 * 1000L
 }
 
 private fun formatHour(hour: Int): String {
-    return String.format("%02d:00", hour)
+    return String.format(Locale.US, "%02d:00", hour)
 }

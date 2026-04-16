@@ -243,6 +243,7 @@ class TimerService : Service() {
         alertScheduler.cancelAll()
         releaseWakeLock()
         TimerStateManager.update { it.copy(state = ShiftState.DETENIDO) }
+        serviceScope.launch { sessionDataStore.clearSession() }
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
     }

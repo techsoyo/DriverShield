@@ -25,6 +25,9 @@ class SessionDataStore(private val context: Context) {
         val START_HOUR = intPreferencesKey("start_hour")
         val END_HOUR = intPreferencesKey("end_hour")
         val OFF_DAYS = stringPreferencesKey("off_days")
+        val ALTERNATE_OFF_DAYS = stringPreferencesKey("alternate_off_days")
+        val WEEKS_TO_ROTATE = intPreferencesKey("weeks_to_rotate")
+        val NEXT_ALT_REFERENCE = longPreferencesKey("next_alt_reference")
         val IS_SESSION_TAMPERED = booleanPreferencesKey("is_session_tampered")
     }
 
@@ -64,6 +67,25 @@ class SessionDataStore(private val context: Context) {
             if (raw.isEmpty()) emptyList()
             else raw.split(',').mapNotNull { it.toIntOrNull() }
         }
+
+    val alternateOffDays: Flow<List<Int>> = context.dataStore.data
+        .map { prefs ->
+            val raw = prefs[ALTERNATE_OFF_DAYS] ?: ""
+            if (raw.isEmpty()) emptyList()
+            else raw.split(',').mapNotNull { it.toIntOrNull() }
+        }
+
+    val weeksToRotate: Flow<Int> = context.dataStore.data
+        .map { prefs -> prefs[WEEKS_TO_ROTATE] ?: 5 }
+
+    val nextAltReference: Flow<Long> = context.dataStore.data
+        .map { prefs -> prefs[NEXT_ALT_REFERENCE] ?: 0L }
+
+    suspend fun saveNextAltReference(epochMs: Long) {
+        context.dataStore.edit { prefs ->
+            prefs[NEXT_ALT_REFERENCE] = epochMs
+        }
+    }
 
     suspend fun setSessionTampered(tampered: Boolean) {
         context.dataStore.edit { prefs ->
@@ -107,12 +129,16 @@ class SessionDataStore(private val context: Context) {
     suspend fun saveFullConfig(
         startHour: Int,
         endHour: Int,
-        offDays: List<Int>
+        offDays: List<Int>,
+        alternateOffDays: List<Int> = emptyList(),
+        weeksToRotate: Int = 5
     ) {
         context.dataStore.edit { prefs ->
             prefs[START_HOUR] = startHour
             prefs[END_HOUR] = endHour
             prefs[OFF_DAYS] = offDays.joinToString(",")
+            prefs[ALTERNATE_OFF_DAYS] = alternateOffDays.joinToString(",")
+            prefs[WEEKS_TO_ROTATE] = weeksToRotate
         }
     }
 

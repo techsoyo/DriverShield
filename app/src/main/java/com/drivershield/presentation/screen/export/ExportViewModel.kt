@@ -6,6 +6,7 @@ import android.net.Uri
 import androidx.core.content.FileProvider
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.drivershield.R
 import com.drivershield.data.local.datastore.SessionDataStore
 import com.drivershield.domain.export.CsvExporter
 import com.drivershield.domain.export.PdfExporter
@@ -58,9 +59,9 @@ class ExportViewModel @Inject constructor(
                     putExtra(Intent.EXTRA_STREAM, uri)
                     addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                 }
-                _exportState.value = ExportState.Success(Intent.createChooser(intent, "Compartir informe PDF"))
+                _exportState.value = ExportState.Success(Intent.createChooser(intent, context.getString(R.string.share_pdf_chooser)))
             }.onFailure { e ->
-                _exportState.value = ExportState.Error(e.message ?: "Error al generar el PDF")
+                _exportState.value = ExportState.Error(e.message ?: context.getString(R.string.error_generating_pdf))
             }
         }
     }
@@ -83,9 +84,9 @@ class ExportViewModel @Inject constructor(
                     putExtra(Intent.EXTRA_STREAM, uri)
                     addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                 }
-                _exportState.value = ExportState.Success(Intent.createChooser(intent, "Compartir datos CSV"))
+                _exportState.value = ExportState.Success(Intent.createChooser(intent, context.getString(R.string.share_csv_chooser)))
             }.onFailure { e ->
-                _exportState.value = ExportState.Error(e.message ?: "Error al generar el CSV")
+                _exportState.value = ExportState.Error(e.message ?: context.getString(R.string.error_generating_csv))
             }
         }
     }

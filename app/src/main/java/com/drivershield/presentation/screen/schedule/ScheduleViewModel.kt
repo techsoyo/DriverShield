@@ -1,15 +1,12 @@
 package com.drivershield.presentation.screen.schedule
 
-import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.drivershield.data.local.datastore.SessionDataStore
 import com.drivershield.domain.model.DriverProfile
 import com.drivershield.domain.model.WorkSchedule
 import com.drivershield.domain.repository.ScheduleRepository
-import com.drivershield.service.notification.scheduleWeek5Reminder
 import dagger.hilt.android.lifecycle.HiltViewModel
-import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -23,12 +20,13 @@ data class ScheduleUiState(
     val startHour: Int = 8,
     val endHour: Int = 16,
     val offDays: List<Int> = listOf(6, 7),
-    val cycleStartEpoch: Long = 0L
+    val alternateOffDays: List<Int> = emptyList(),
+    val weeksToRotate: Int = 5,
+    val nextAltReference: Long = 0L
 )
 
 @HiltViewModel
 class ScheduleViewModel @Inject constructor(
-    @ApplicationContext private val context: Context,
     private val scheduleRepository: ScheduleRepository,
     private val sessionDataStore: SessionDataStore
 ) : ViewModel() {
@@ -38,11 +36,7 @@ class ScheduleViewModel @Inject constructor(
         sessionDataStore.driverFullName,
         sessionDataStore.driverDni
     ) { schedule, fullName, dni ->
-        Triple(
-            schedule,
-            DriverProfile(fullName = fullName, dni = dni),
-            schedule?.cycleStartEpoch ?: 0L
-        )
+        Pair(schedule, DriverProfile(fullName = fullName, dni = dni))
     }
 
     private val hoursAndOffDays = combine(
@@ -53,17 +47,26 @@ class ScheduleViewModel @Inject constructor(
         Triple(startH, endH, offD)
     }
 
+    private val alternateConfig = combine(
+        sessionDataStore.alternateOffDays,
+        sessionDataStore.weeksToRotate,
+        sessionDataStore.nextAltReference
+    ) { altDays, weeks, nextRef -> Triple(altDays, weeks, nextRef) }
+
     val uiState: StateFlow<ScheduleUiState> = combine(
         scheduleAndDriver,
-        hoursAndOffDays
-    ) { schedDrv, hoursOff ->
+        hoursAndOffDays,
+        alternateConfig
+    ) { schedDrv, hoursOff, altConf ->
         ScheduleUiState(
             schedule = schedDrv.first,
             driverProfile = schedDrv.second,
             startHour = hoursOff.first,
             endHour = hoursOff.second,
             offDays = hoursOff.third,
-            cycleStartEpoch = schedDrv.third
+            alternateOffDays = altConf.first,
+            weeksToRotate = altConf.second,
+            nextAltReference = altConf.third
         )
     }.stateIn(
         scope = viewModelScope,
@@ -76,8 +79,7 @@ class ScheduleViewModel @Inject constructor(
         endTime: String,
         offDays: List<Int>,
         dailyTargetMs: Long,
-        weeklyTargetMs: Long,
-        cycleStartEpoch: Long = 0L
+        weeklyTargetMs: Long
     ) {
         viewModelScope.launch {
             scheduleRepository.saveSchedule(
@@ -87,13 +89,9 @@ class ScheduleViewModel @Inject constructor(
                     offDays = offDays,
                     weeklyTargetMs = weeklyTargetMs,
                     dailyTargetMs = dailyTargetMs,
-                    cycleStartEpoch = cycleStartEpoch
+                    cycleStartEpoch = 0L
                 )
             )
-
-            if (cycleStartEpoch > 0L) {
-                scheduleWeek5Reminder(context, cycleStartEpoch)
-            }
         }
     }
 
@@ -103,9 +101,53 @@ class ScheduleViewModel @Inject constructor(
         }
     }
 
-    fun saveConfigHours(startHour: Int, endHour: Int, offDays: List<Int>) {
+    fun saveConfigHours(startHour: Int, endHour: Int) {
         viewModelScope.launch {
-            sessionDataStore.saveFullConfig(startHour, endHour, offDays)
+            val current = uiState.value
+            sessionDataStore.saveFullConfig(
+                startHour, endHour,
+                current.offDays, current.alternateOffDays, current.weeksToRotate
+            )
+        }
+    }
+
+    fun toggleFixedOffDay(day: Int) {
+        viewModelScope.launch {
+            val current = uiState.value
+            val newFixed = if (current.offDays.contains(day)) current.offDays - day else current.offDays + day
+            val newAlternate = current.alternateOffDays - day
+            sessionDataStore.saveFullConfig(
+                current.startHour, current.endHour,
+                newFixed, newAlternate, current.weeksToRotate
+            )
+        }
+    }
+
+    fun toggleAlternateOffDay(day: Int) {
+        viewModelScope.launch {
+            val current = uiState.value
+            val newAlternate = if (current.alternateOffDays.contains(day)) current.alternateOffDays - day else current.alternateOffDays + day
+            val newFixed = current.offDays - day
+            sessionDataStore.saveFullConfig(
+                current.startHour, current.endHour,
+                newFixed, newAlternate, current.weeksToRotate
+            )
+        }
+    }
+
+    fun setWeeksToRotate(weeks: Int) {
+        viewModelScope.launch {
+            val current = uiState.value
+            sessionDataStore.saveFullConfig(
+                current.startHour, current.endHour,
+                current.offDays, current.alternateOffDays, weeks
+            )
+        }
+    }
+
+    fun setNextAltReference(epochMs: Long) {
+        viewModelScope.launch {
+            sessionDataStore.saveNextAltReference(epochMs)
         }
     }
 }

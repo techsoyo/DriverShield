@@ -1,45 +1,36 @@
 package com.drivershield.presentation.screen.main
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.drivershield.domain.model.WorkSchedule
 import com.drivershield.domain.util.CycleCalculator
-import com.drivershield.presentation.theme.DriverShieldColors
+import com.drivershield.presentation.component.CasioTimerBox
 import com.drivershield.service.ShiftState
 import com.drivershield.service.TimerState
 import java.time.LocalDate
-import java.time.temporal.WeekFields
 import java.util.Locale
 import java.util.concurrent.TimeUnit
+
+// Paleta Casio Retro - UI/UX Maestro
+private val CasioGreen = Color(0xFF00FF41)
+private val CasioRed = Color(0xFFFF3131)
+private val CasioWhite = Color(0xFFE0E0E0)
+private val CasioBorg = Color(0xFF1A1A1A)
 
 @Composable
 fun MainScreen(
@@ -47,93 +38,61 @@ fun MainScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val schedule by viewModel.schedule.collectAsStateWithLifecycle()
+    val alternateOffDays by viewModel.alternateOffDays.collectAsStateWithLifecycle()
+    val weeksToRotate by viewModel.weeksToRotate.collectAsStateWithLifecycle()
+    val nextAltReference by viewModel.nextAltReference.collectAsStateWithLifecycle()
 
     val today = LocalDate.now()
-    val weekFields = WeekFields.ISO
-    val currentIsoYear = today.get(weekFields.weekBasedYear())
-    val currentWeekNumber = today.get(weekFields.weekOfWeekBasedYear())
-    val todayDayOfWeek = today.dayOfWeek.value
     val mondayThisWeek = today.with(java.time.DayOfWeek.MONDAY)
-
-    val cycleStartEpoch = schedule?.cycleStartEpoch ?: 0L
     val userOffDays = schedule?.offDays ?: emptyList()
+    
+    val refDate: LocalDate? = if (nextAltReference > 0L)
+        LocalDate.ofEpochDay(nextAltReference / 86_400_000L)
+    else null
 
-    val workDaysThisWeek = if (cycleStartEpoch > 0L) {
-        CycleCalculator.getWorkDaysInWeek(mondayThisWeek, cycleStartEpoch, userOffDays)
-    } else {
-        val offDays = schedule?.offDays ?: listOf(6, 7)
-        (1..7).filter { !offDays.contains(it) }.count()
-    }
+    val workDaysThisWeek = CycleCalculator.getWorkDaysInWeek(
+        mondayThisWeek, refDate, userOffDays.toSet(), alternateOffDays.toSet(), weeksToRotate
+    )
 
-    val isWeek5 = cycleStartEpoch > 0L && CycleCalculator.isWeek5(today, cycleStartEpoch)
+    val dayStatus = CycleCalculator.getDayStatus(today, refDate, userOffDays.toSet(), alternateOffDays.toSet(), weeksToRotate)
+    val isOffDayToday = CycleCalculator.isOffDay(today, refDate, userOffDays.toSet(), alternateOffDays.toSet(), weeksToRotate)
+    
     val dailyTarget = schedule?.dailyTargetMs ?: (8L * 60 * 60 * 1000)
     val weeklyTarget = if (schedule != null) dailyTarget * workDaysThisWeek else TimerState.MAX_WEEKLY_MS
-
-    val isOffDayToday = CycleCalculator.isOffDay(today, cycleStartEpoch, userOffDays)
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
+            .background(Color.Black)
             .verticalScroll(rememberScrollState())
             .padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        verticalArrangement = Arrangement.spacedBy(20.dp)
     ) {
-        StatusChip(state = uiState.shiftState)
+        // Indicador de Modo LCD
+        CasioStatusIndicator(state = uiState.shiftState)
 
         if (isOffDayToday) {
-            OffDayBanner(isWeek5 = isWeek5)
+            CasioOffDayBanner(statusName = dayStatus.name)
         }
 
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            CounterCard(
-                title = "Trabajo Progresivo",
-                valueMs = uiState.workProgressMs,
-                color = DriverShieldColors.WorkGreen,
-                modifier = Modifier.weight(1f)
-            )
-            CounterCard(
-                title = "Trabajo Regresivo",
-                valueMs = uiState.workRemainingMs,
-                color = DriverShieldColors.WorkGreen,
-                isCountdown = true,
-                modifier = Modifier.weight(1f)
-            )
+        // BLOQUE TRABAJO
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            CasioTimerBox("TRABAJO PROG.", formatMs(uiState.workProgressMs), CasioGreen, Modifier.weight(1f))
+            CasioTimerBox("TRABAJO REGR.", formatMs(uiState.workRemainingMs), CasioGreen, Modifier.weight(1f))
         }
 
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            CounterCard(
-                title = "Descanso Progresivo",
-                valueMs = uiState.restProgressMs,
-                color = DriverShieldColors.DangerRed,
-                modifier = Modifier.weight(1f)
-            )
-            CounterCard(
-                title = "Descanso Regresivo",
-                valueMs = uiState.restRemainingMs,
-                color = DriverShieldColors.DangerRed,
-                isCountdown = true,
-                modifier = Modifier.weight(1f)
-            )
+        // BLOQUE DESCANSO
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            CasioTimerBox("DESCANSO PROG.", formatMs(uiState.restProgressMs), CasioRed, Modifier.weight(1f))
+            CasioTimerBox("DESCANSO REGR.", formatMs(uiState.restRemainingMs), CasioRed, Modifier.weight(1f))
         }
 
-        CounterCard(
-            title = "Semanal Progresivo",
-            valueMs = uiState.weeklyProgressMs,
-            color = MaterialTheme.colorScheme.onSurface,
-            isWeekly = true
-        )
+        CasioTimerBox("SEMANAL TOTAL", formatMs(uiState.weeklyProgressMs), CasioWhite, Modifier.fillMaxWidth())
 
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(4.dp))
 
-        ActionButtons(
+        CasioActionButtons(
             state = uiState.shiftState,
             onStart = { viewModel.startShift() },
             onPause = { viewModel.pauseShift() },
@@ -141,93 +100,52 @@ fun MainScreen(
             onReset = { viewModel.resetShift() }
         )
 
-        WeeklyProgressBar(
+        CasioWeeklyFooter(
             weeklyMs = uiState.weeklyProgressMs,
             limitMs = weeklyTarget,
-            workDays = workDaysThisWeek,
-            isOffDayToday = isOffDayToday,
-            isWeek5 = isWeek5,
-            schedule = schedule
+            workDays = workDaysThisWeek
         )
     }
 }
 
 @Composable
-private fun StatusChip(state: ShiftState) {
+private fun CasioStatusIndicator(state: ShiftState) {
     val (text, color) = when (state) {
-        ShiftState.TRABAJANDO -> "TRABAJANDO" to MaterialTheme.colorScheme.secondary
-        ShiftState.EN_PAUSA -> "EN PAUSA" to MaterialTheme.colorScheme.primary
-        ShiftState.DETENIDO -> "DETENIDO" to MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+        ShiftState.TRABAJANDO -> "MODE: TRABAJO" to CasioGreen
+        ShiftState.EN_PAUSA -> "MODE: PAUSA" to CasioWhite
+        ShiftState.DETENIDO -> "MODE: STANDBY" to Color.Gray
     }
-
     Box(
         modifier = Modifier
-            .background(
-                color = color.copy(alpha = 0.15f),
-                shape = RoundedCornerShape(16.dp)
-            )
-            .padding(horizontal = 20.dp, vertical = 8.dp)
+            .border(1.dp, color.copy(alpha = 0.4f), RoundedCornerShape(2.dp))
+            .padding(horizontal = 12.dp, vertical = 4.dp)
+    ) {
+        Text(text = text, color = color, fontWeight = FontWeight.Bold, fontSize = 11.sp, letterSpacing = 2.sp)
+    }
+}
+
+@Composable
+private fun CasioOffDayBanner(statusName: String) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(CasioBorg)
+            .border(1.dp, Color.DarkGray)
+            .padding(10.dp)
     ) {
         Text(
-            text = text,
-            color = color,
+            text = "ESTADO: $statusName",
+            color = CasioWhite,
             fontWeight = FontWeight.Bold,
-            fontSize = 14.sp
+            textAlign = TextAlign.Center,
+            fontSize = 12.sp,
+            modifier = Modifier.fillMaxWidth()
         )
     }
 }
 
 @Composable
-private fun CounterCard(
-    title: String,
-    valueMs: Long,
-    color: androidx.compose.ui.graphics.Color,
-    isCountdown: Boolean = false,
-    isWeekly: Boolean = false,
-    modifier: Modifier = Modifier
-) {
-    Card(
-        modifier = modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        ),
-        shape = RoundedCornerShape(12.dp)
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Text(
-                text = title,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Medium
-            )
-
-            Spacer(modifier = Modifier.height(4.dp))
-
-            Text(
-                text = formatMs(valueMs),
-                color = color,
-                fontFamily = FontFamily.Monospace,
-                fontSize = if (isWeekly) 32.sp else 28.sp,
-                fontWeight = FontWeight.Bold
-            )
-
-            if (isWeekly) {
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = "Límite: ${formatMs(TimerState.MAX_WEEKLY_MS)}",
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
-                    fontSize = 10.sp
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun ActionButtons(
+private fun CasioActionButtons(
     state: ShiftState,
     onStart: () -> Unit,
     onPause: () -> Unit,
@@ -235,226 +153,51 @@ private fun ActionButtons(
     onReset: () -> Unit
 ) {
     when (state) {
-        ShiftState.DETENIDO -> {
-            Button(
-                onClick = onStart,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(64.dp),
-                shape = RoundedCornerShape(16.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.secondary
-                )
-            ) {
-                Text("Iniciar Turno", fontSize = 20.sp, fontWeight = FontWeight.Bold)
-            }
+        ShiftState.DETENIDO -> CasioButton("START / INICIAR", CasioGreen, onStart)
+        ShiftState.TRABAJANDO -> Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            CasioButton("LAP / PAUSA", CasioWhite, onPause, Modifier.weight(1f))
+            CasioButton("STOP / RESET", CasioRed, onReset, Modifier.weight(1f))
         }
-
-        ShiftState.TRABAJANDO -> {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                Button(
-                    onClick = onPause,
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(56.dp),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.primary
-                    )
-                ) {
-                    Text("Pausa", fontSize = 16.sp, fontWeight = FontWeight.Bold)
-                }
-
-                Button(
-                    onClick = onReset,
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(56.dp),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.error
-                    )
-                ) {
-                    Text("Reset", fontSize = 16.sp, fontWeight = FontWeight.Bold)
-                }
-            }
-        }
-
-        ShiftState.EN_PAUSA -> {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                Button(
-                    onClick = onResume,
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(56.dp),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.secondary
-                    )
-                ) {
-                    Text("Retomar", fontSize = 16.sp, fontWeight = FontWeight.Bold)
-                }
-
-                Button(
-                    onClick = onReset,
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(56.dp),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.error
-                    )
-                ) {
-                    Text("Finalizar", fontSize = 16.sp, fontWeight = FontWeight.Bold)
-                }
-            }
+        ShiftState.EN_PAUSA -> Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            CasioButton("RESUME", CasioGreen, onResume, Modifier.weight(1f))
+            CasioButton("FINISH", CasioRed, onReset, Modifier.weight(1f))
         }
     }
 }
 
 @Composable
-private fun OffDayBanner(isWeek5: Boolean) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = if (isWeek5)
-                MaterialTheme.colorScheme.error.copy(alpha = 0.1f)
-            else
-                MaterialTheme.colorScheme.surface.copy(alpha = 0.5f)
-        ),
-        shape = RoundedCornerShape(12.dp)
+private fun CasioButton(text: String, color: Color, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    OutlinedButton(
+        onClick = onClick,
+        modifier = modifier.height(54.dp),
+        shape = RoundedCornerShape(4.dp),
+        border = androidx.compose.foundation.BorderStroke(2.dp, color),
+        colors = ButtonDefaults.outlinedButtonColors(contentColor = color)
     ) {
-        Row(
-            modifier = Modifier.padding(16.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = if (isWeek5) "🔴" else "🛏",
-                fontSize = 24.sp
-            )
-            Column {
-                Text(
-                    text = if (isWeek5) "Semana 5: Libranza Dom-Lun" else "Hoy es día de libranza",
-                    color = if (isWeek5)
-                        MaterialTheme.colorScheme.error
-                    else
-                        MaterialTheme.colorScheme.onSurface,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 16.sp
-                )
-                Text(
-                    text = if (isWeek5)
-                        "Semana de descanso automático. La barra semanal se ajusta a 5 días laborables."
-                    else
-                        "No se espera trabajo. La barra semanal se ajusta a los días laborables.",
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
-                    fontSize = 12.sp
-                )
-            }
-        }
+        Text(text = text.uppercase(), fontSize = 13.sp, fontWeight = FontWeight.Black)
     }
 }
 
 @Composable
-private fun WeeklyProgressBar(
-    weeklyMs: Long,
-    limitMs: Long,
-    workDays: Int,
-    isOffDayToday: Boolean,
-    isWeek5: Boolean,
-    schedule: com.drivershield.domain.model.WorkSchedule?
-) {
+private fun CasioWeeklyFooter(weeklyMs: Long, limitMs: Long, workDays: Int) {
     val progress = if (limitMs > 0) weeklyMs.toFloat() / limitMs else 0f
-
-    val cycleStartEpoch = schedule?.cycleStartEpoch ?: 0L
-    val daysUntilWeek5 = if (cycleStartEpoch > 0L) CycleCalculator.getDaysUntilWeek5(cycleStartEpoch) else -1
-    val isSundayBeforeWeek5 = cycleStartEpoch > 0L && CycleCalculator.isSundayBeforeWeek5(cycleStartEpoch)
-
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        ),
-        shape = RoundedCornerShape(12.dp)
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                val title = when {
-                    isWeek5 -> "Semanal (Sem 5)"
-                    isOffDayToday -> "Semanal (libranza)"
-                    else -> "Semanal"
-                }
-                Text(
-                    text = title,
-                    color = if (isWeek5) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = "${(progress * 100).coerceAtMost(100f).toInt()}%",
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                )
-            }
-
-            androidx.compose.material3.LinearProgressIndicator(
-                progress = { progress.coerceIn(0f, 1f) },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(12.dp),
-                color = when {
-                    isWeek5 -> MaterialTheme.colorScheme.error
-                    progress > 0.95f -> MaterialTheme.colorScheme.error
-                    progress > 0.8f -> MaterialTheme.colorScheme.tertiary
-                    else -> MaterialTheme.colorScheme.secondary
-                },
-                trackColor = MaterialTheme.colorScheme.surfaceVariant
-            )
-
-            Text(
-                text = "${formatMs(weeklyMs)} / ${formatMs(limitMs)} ($workDays días laborables)",
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
-                fontSize = 11.sp,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth()
-            )
-
-            if (isSundayBeforeWeek5) {
-                Text(
-                    text = "⚠️ Mañana comienza tu semana de libranza Dom-Lun",
-                    color = MaterialTheme.colorScheme.error,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Bold,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth()
-                )
-            } else if (daysUntilWeek5 > 0 && daysUntilWeek5 <= 7 && !isWeek5) {
-                Text(
-                    text = "Semana 5 en $daysUntilWeek5 días",
-                    color = MaterialTheme.colorScheme.tertiary,
-                    fontSize = 11.sp,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
-        }
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        LinearProgressIndicator(
+            progress = { progress.coerceIn(0f, 1f) },
+            modifier = Modifier.fillMaxWidth().height(8.dp),
+            color = if (progress > 0.9f) CasioRed else CasioGreen,
+            trackColor = CasioBorg
+        )
+        Text(
+            text = "${formatMs(weeklyMs)} / ${formatMs(limitMs)} ($workDays DAYS)",
+            color = Color.Gray, fontSize = 10.sp, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth()
+        )
     }
 }
 
 private fun formatMs(ms: Long): String {
-    val hours = TimeUnit.MILLISECONDS.toHours(ms)
-    val minutes = TimeUnit.MILLISECONDS.toMinutes(ms) % 60
-    val seconds = TimeUnit.MILLISECONDS.toSeconds(ms) % 60
-    return String.format(Locale.US, "%02d:%02d:%02d", hours, minutes, seconds)
+    val h = TimeUnit.MILLISECONDS.toHours(ms)
+    val m = TimeUnit.MILLISECONDS.toMinutes(ms) % 60
+    val s = TimeUnit.MILLISECONDS.toSeconds(ms) % 60
+    return String.format(Locale.US, "%02d:%02d:%02d", h, m, s)
 }

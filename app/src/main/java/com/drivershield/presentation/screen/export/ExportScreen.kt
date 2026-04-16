@@ -22,6 +22,8 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.drivershield.presentation.theme.DriverShieldColors
 import com.drivershield.presentation.ui.util.DateTransformation
+import androidx.compose.ui.res.stringResource
+import com.drivershield.R
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.time.format.DateTimeParseException
@@ -48,15 +50,17 @@ fun ExportScreen(viewModel: ExportViewModel = hiltViewModel()) {
     var endError by remember { mutableStateOf<String?>(null) }
 
     val fmt = DateTimeFormatter.ofPattern("ddMMyyyy")
+    val errInvalidDate = stringResource(R.string.error_invalid_date_format)
+    val errEndBeforeStart = stringResource(R.string.error_end_before_start)
 
     fun validateAndGetDates(): Pair<LocalDate, LocalDate>? {
         startError = null
         endError = null
         val start = parseDate(startText.trim(), fmt)
         val end = parseDate(endText.trim(), fmt)
-        if (start == null) { startError = "Formato inválido (DD/MM/AAAA)"; return null }
-        if (end == null) { endError = "Formato inválido (DD/MM/AAAA)"; return null }
-        if (end < start) { endError = "Debe ser posterior a la fecha inicio"; return null }
+        if (start == null) { startError = errInvalidDate; return null }
+        if (end == null) { endError = errInvalidDate; return null }
+        if (end < start) { endError = errEndBeforeStart; return null }
         return Pair(start, end)
     }
 
@@ -74,13 +78,13 @@ fun ExportScreen(viewModel: ExportViewModel = hiltViewModel()) {
         ) {
             // ── Título ────────────────────────────────────────────────────
             Text(
-                text = "Exportar historial",
+                text = stringResource(R.string.export_title),
                 color = Color.White,
                 fontWeight = FontWeight.Bold,
                 fontSize = 22.sp
             )
             Text(
-                text = "Introduce el rango de fechas que quieres exportar.",
+                text = stringResource(R.string.export_subtitle),
                 color = Color.Gray,
                 fontSize = 13.sp
             )
@@ -106,8 +110,8 @@ fun ExportScreen(viewModel: ExportViewModel = hiltViewModel()) {
                         if (clean.length <= 8) startText = clean
                         startError = null
                     },
-                    label = { Text("Fecha inicio") },
-                    placeholder = { Text("DD/MM/AAAA", color = Color(0xFF444444)) },
+                    label = { Text(stringResource(R.string.label_start_date)) },
+                    placeholder = { Text(stringResource(R.string.placeholder_date_format), color = Color(0xFF444444)) },
                     isError = startError != null,
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
@@ -131,8 +135,8 @@ fun ExportScreen(viewModel: ExportViewModel = hiltViewModel()) {
                         if (clean.length <= 8) endText = clean
                         endError = null
                     },
-                    label = { Text("Fecha fin") },
-                    placeholder = { Text("DD/MM/AAAA", color = Color(0xFF444444)) },
+                    label = { Text(stringResource(R.string.label_end_date)) },
+                    placeholder = { Text(stringResource(R.string.placeholder_date_format), color = Color(0xFF444444)) },
                     isError = endError != null,
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
@@ -176,7 +180,7 @@ fun ExportScreen(viewModel: ExportViewModel = hiltViewModel()) {
                             strokeWidth = 2.dp
                         )
                     } else {
-                        Text("Exportar PDF", fontWeight = FontWeight.Bold)
+                        Text(stringResource(R.string.btn_export_pdf), fontWeight = FontWeight.Bold)
                     }
                 }
 
@@ -192,7 +196,7 @@ fun ExportScreen(viewModel: ExportViewModel = hiltViewModel()) {
                     colors = ButtonDefaults.outlinedButtonColors(contentColor = DriverShieldColors.Accent),
                     border = androidx.compose.foundation.BorderStroke(1.dp, DriverShieldColors.Accent)
                 ) {
-                    Text("Exportar CSV", fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.btn_export_csv), fontWeight = FontWeight.Bold)
                 }
             }
 
@@ -221,12 +225,12 @@ private fun FormatInfoCard() {
         Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             FormatRow(
                 label = "PDF",
-                description = "Documento de presentación a inspector o responsable. Incluye tablas semanales, fila de Cierre del Domingo y hash de verificación."
+                description = stringResource(R.string.export_pdf_description)
             )
             HorizontalDivider(color = Color(0xFF1A1A1A))
             FormatRow(
                 label = "CSV",
-                description = "Datos crudos para importar en Excel. Incluye timestamps epoch, duration_ms y resumen semanal al pie."
+                description = stringResource(R.string.export_csv_description)
             )
         }
     }

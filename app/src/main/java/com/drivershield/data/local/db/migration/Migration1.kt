@@ -45,3 +45,40 @@ val Migration3 = object : Migration(3, 4) {
         )
     }
 }
+
+/**
+ * v4 → v5: Añade las tablas `weekly_aggregates` y `day_overrides`.
+ *
+ * - `weekly_aggregates`: caché de totales por semana ISO. Clave primaria compuesta
+ *   (isoYear, isoWeekNumber) para acceso O(1) en la barra semanal del dashboard.
+ *
+ * - `day_overrides`: libranzas manuales por día. El campo `dateEpochDay` es el
+ *   número de días desde epoch (LocalDate.toEpochDay()), no milisegundos, para
+ *   evitar colisiones por zona horaria en días límite.
+ */
+val Migration4 = object : Migration(4, 5) {
+    override fun migrate(database: SupportSQLiteDatabase) {
+        database.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS weekly_aggregates (
+                isoYear       INTEGER NOT NULL,
+                isoWeekNumber INTEGER NOT NULL,
+                totalWorkMs   INTEGER NOT NULL,
+                totalRestMs   INTEGER NOT NULL,
+                sessionCount  INTEGER NOT NULL,
+                lastUpdated   INTEGER NOT NULL,
+                PRIMARY KEY (isoYear, isoWeekNumber)
+            )
+            """.trimIndent()
+        )
+        database.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS day_overrides (
+                dateEpochDay   INTEGER NOT NULL PRIMARY KEY,
+                isLibranza     INTEGER NOT NULL,
+                manualOverride INTEGER NOT NULL DEFAULT 1
+            )
+            """.trimIndent()
+        )
+    }
+}
