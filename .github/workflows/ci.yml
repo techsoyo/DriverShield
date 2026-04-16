@@ -15,10 +15,12 @@ concurrency:
 jobs:
 
   # ─────────────────────────────────────────────
-  # JOB 1: Lint de estilo (ktlint)
+  # JOB 1: Android Lint
+  # Detecta bugs, deprecaciones, problemas de
+  # accesibilidad y seguridad en tiempo de CI.
   # ─────────────────────────────────────────────
   lint:
-    name: Ktlint
+    name: Android Lint
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -34,15 +36,15 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      - name: Run ktlint
-        run: ./gradlew ktlintCheck
+      - name: Run Android Lint
+        run: ./gradlew lintDebug
 
-      - name: Upload ktlint report
+      - name: Upload Lint report
         uses: actions/upload-artifact@v4
         if: failure()
         with:
-          name: ktlint-report
-          path: '**/build/reports/ktlint/**'
+          name: lint-report
+          path: '**/build/reports/lint-results-debug.*'
           retention-days: 7
 
   # ─────────────────────────────────────────────
