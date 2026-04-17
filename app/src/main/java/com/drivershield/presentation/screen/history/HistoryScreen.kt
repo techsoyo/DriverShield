@@ -42,6 +42,7 @@ import com.drivershield.domain.model.SessionReport
 import com.drivershield.domain.model.ShiftSession
 import com.drivershield.domain.model.ShiftType
 import com.drivershield.domain.util.TimeConverter
+import com.drivershield.presentation.theme.CasioColors
 import com.drivershield.presentation.theme.DriverShieldColors
 import com.drivershield.presentation.ui.util.DateTransformation
 import java.time.DayOfWeek
@@ -112,7 +113,7 @@ fun HistoryScreen(
         )
     }
 
-    Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
+    Box(modifier = Modifier.fillMaxSize().background(CasioColors.caseResinDark)) {
         Column(modifier = Modifier.fillMaxSize()) {
             if (dateRange != null) {
                 DateRangeBanner(
@@ -196,25 +197,27 @@ fun DateRangePickerDialog(
     var endError by remember { mutableStateOf<String?>(null) }
 
     val fieldColors = OutlinedTextFieldDefaults.colors(
-        focusedTextColor = Color.White,
-        unfocusedTextColor = Color.LightGray,
-        focusedBorderColor = DriverShieldColors.Accent,
-        unfocusedBorderColor = Color.DarkGray,
-        focusedLabelColor = DriverShieldColors.Accent,
-        unfocusedLabelColor = Color.Gray,
-        cursorColor = DriverShieldColors.Accent,
-        errorBorderColor = Color.Red,
-        errorLabelColor = Color.Red
+        focusedTextColor    = CasioColors.lcdTextOn,
+        unfocusedTextColor  = CasioColors.lcdTextOn.copy(alpha = 0.75f),
+        focusedBorderColor  = CasioColors.illuminatorNight,
+        unfocusedBorderColor = CasioColors.legendBlue,
+        focusedLabelColor   = CasioColors.illuminatorNight,
+        unfocusedLabelColor = CasioColors.legendGold,
+        cursorColor         = CasioColors.illuminatorNight,
+        errorBorderColor    = Color.Red,
+        errorLabelColor     = Color.Red,
+        focusedContainerColor   = CasioColors.lcdBackground,
+        unfocusedContainerColor = CasioColors.lcdBackground
     )
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        containerColor = Color(0xFF141414),
-        shape = RoundedCornerShape(16.dp),
+        containerColor = CasioColors.caseResinDark,
+        shape = RoundedCornerShape(2.dp),
         title = {
             Text(
                 text = stringResource(R.string.history_query_title),
-                color = Color.White,
+                color = CasioColors.legendGold,
                 fontWeight = FontWeight.Bold,
                 style = MaterialTheme.typography.titleLarge
             )
@@ -223,7 +226,7 @@ fun DateRangePickerDialog(
             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 Text(
                     text = stringResource(R.string.history_query_subtitle),
-                    color = Color.Gray,
+                    color = CasioColors.legendGold.copy(alpha = 0.55f),
                     fontSize = 13.sp
                 )
 
@@ -289,12 +292,12 @@ fun DateRangePickerDialog(
                 }
                 if (valid && start != null && end != null) onConfirm(start, end)
             }) {
-                Text(stringResource(R.string.btn_view_history), color = DriverShieldColors.Accent, fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.btn_view_history), color = CasioColors.illuminatorNight, fontWeight = FontWeight.Bold)
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.btn_cancel), color = Color.Gray)
+                Text(stringResource(R.string.btn_cancel), color = CasioColors.legendGold.copy(alpha = 0.5f))
             }
         }
     )
@@ -322,7 +325,7 @@ fun DateRangeBanner(
                     onLongPress = { onLongPress?.invoke() }
                 )
             }
-            .background(Color(0xFF0D0D0D))
+            .background(CasioColors.caseResinDark)
             .padding(horizontal = 16.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
@@ -337,7 +340,7 @@ fun DateRangeBanner(
             Spacer(modifier = Modifier.width(6.dp))
             Text(
                 text = "${start.format(fmt)}  →  ${end.format(fmt)}",
-                color = Color.White,
+                color = CasioColors.legendGold,
                 fontSize = 14.sp
             )
         }
@@ -369,7 +372,7 @@ fun WeekSummaryCard(
             .fillMaxWidth()
             .padding(horizontal = 12.dp, vertical = 6.dp)
             .animateContentSize(),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF0D0D0D)),
+        colors = CardDefaults.cardColors(containerColor = CasioColors.caseResinDark),
         shape = RoundedCornerShape(12.dp)
     ) {
         Column {
@@ -383,7 +386,7 @@ fun WeekSummaryCard(
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = if (week.isCurrentWeek) stringResource(R.string.label_current_week) else stringResource(R.string.label_week_range, rangeLabel),
-                        color = if (week.isCurrentWeek) DriverShieldColors.Accent else Color.White,
+                        color = if (week.isCurrentWeek) DriverShieldColors.Accent else CasioColors.legendGold,
                         fontWeight = FontWeight.Bold,
                         fontSize = 15.sp
                     )
@@ -464,7 +467,7 @@ fun DayRowAccordion(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         text = dateText,
-                        color = if (isSunday) Color(0xFFFFD700) else Color.White,
+                        color = if (isSunday) CasioColors.illuminatorNight else CasioColors.legendGold,
                         fontWeight = if (isSunday) FontWeight.Bold else FontWeight.Normal,
                         fontSize = 14.sp
                     )
@@ -548,7 +551,7 @@ fun DayRowAccordion(
                 // Cabecera: fecha larga
                 Text(
                     text = fullDateText,
-                    color = Color.White,
+                    color = CasioColors.legendGold,
                     fontWeight = FontWeight.Bold,
                     fontSize = 18.sp,
                     modifier = Modifier.padding(bottom = 4.dp)
@@ -649,7 +652,7 @@ fun SessionTimelineDetail(
                 }
                 Text(
                     text = "Sesión #${session.sessionId}",
-                    color = Color.White,
+                    color = CasioColors.legendGold,
                     fontWeight = FontWeight.SemiBold,
                     fontSize = 13.sp
                 )

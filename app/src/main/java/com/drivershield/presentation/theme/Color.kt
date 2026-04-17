@@ -24,3 +24,21 @@ object DriverShieldColors {
     val VtcLibranzaGray    = Color(0xFF757575)
     val VtcBorderGray      = Color(0xFF333333)
 }
+
+// ─── Tokens de diseño Casio 80's ──────────────────────────────────────────────
+object CasioColors {
+    /** Fondo gris-verdoso del cristal líquido en reposo */
+    val lcdBackground    = Color(0xFF9BA591)
+    /** Segmentos activos — negro desteñido sobre LCD */
+    val lcdTextOn        = Color(0xFF1B1B1B)
+    /** Segmentos inactivos — efecto "fantasma" */
+    val lcdTextOff       = Color(0xFF929B8C)
+    /** Carcasa principal de plástico/resina */
+    val caseResinDark    = Color(0xFF212121)
+    /** Borde azul marino clásico de la carcasa */
+    val legendBlue       = Color(0xFF1B4F72)
+    /** Texto impreso en dorado sobre la carcasa */
+    val legendGold       = Color(0xFFC5A059)
+    /** Fondo del LCD cuando el iluminador nocturno está activo */
+    val illuminatorNight = Color(0xFF00E5FF)
+}

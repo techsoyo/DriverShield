@@ -8,19 +8,19 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 
 private val DarkColorScheme = darkColorScheme(
-    primary = DriverShieldColors.Accent,
-    onPrimary = Color.Black,
-    primaryContainer = DriverShieldColors.AccentDim,
-    secondary = DriverShieldColors.WorkGreen,
-    onSecondary = Color.Black,
-    background = DriverShieldColors.AmoledBlack,
-    onBackground = DriverShieldColors.OnSurface,
-    surface = DriverShieldColors.Surface,
-    onSurface = DriverShieldColors.OnSurface,
-    surfaceVariant = DriverShieldColors.SurfaceHigh,
-    onSurfaceVariant = DriverShieldColors.OnSurfaceMid,
-    error = DriverShieldColors.DangerRed,
-    onError = Color.Black
+    primary          = CasioColors.illuminatorNight,  // #00E5FF — acento interactivo
+    onPrimary        = Color.Black,
+    primaryContainer = CasioColors.legendBlue,        // #1B4F72 — contenedor primario
+    secondary        = CasioColors.legendGold,        // #C5A059 — texto de etiquetas
+    onSecondary      = Color.Black,
+    background       = CasioColors.caseResinDark,     // #212121 — carcasa de plástico
+    onBackground     = CasioColors.legendGold,        // #C5A059 — texto sobre carcasa
+    surface          = Color(0xFF1A1A1A),              // ligeramente más claro que carcasa
+    onSurface        = CasioColors.legendGold,        // #C5A059 — texto sobre superficie
+    surfaceVariant   = CasioColors.legendBlue,        // #1B4F72 — botones +/- y selectores
+    onSurfaceVariant = CasioColors.legendGold,        // #C5A059 — texto en variante
+    error            = DriverShieldColors.DangerRed,
+    onError          = Color.Black
 )
 
 @Composable

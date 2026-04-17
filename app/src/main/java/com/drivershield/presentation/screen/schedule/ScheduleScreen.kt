@@ -46,6 +46,8 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.drivershield.R
+import com.drivershield.presentation.theme.CasioColors
+import com.drivershield.presentation.theme.Digital7
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -75,14 +77,14 @@ fun ScheduleScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
+            .background(CasioColors.caseResinDark)
             .verticalScroll(rememberScrollState())
             .padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         Text(
-            text = "Configuración",
+            text = stringResource(R.string.screen_schedule),
             color = MaterialTheme.colorScheme.onSurface,
             fontSize = 22.sp,
             fontWeight = FontWeight.Bold
@@ -92,33 +94,30 @@ fun ScheduleScreen(
             fullName = driverName,
             dni = driverDni,
             onNameChange = { driverName = it },
-            onDniChange = { driverDni = it },
-            onSave = {
-                viewModel.saveDriverProfile(driverName, driverDni)
-                Toast.makeText(context, context.getString(R.string.toast_driver_profile_saved), Toast.LENGTH_SHORT).show()
-            }
+            onDniChange = { driverDni = it }
         )
 
         TimePickerCard(
-            label = "Hora de inicio",
+            label = stringResource(R.string.label_start_time),
             value = startTime,
             onValueChange = { startTime = it }
         )
 
         TimePickerCard(
-            label = "Hora de fin",
+            label = stringResource(R.string.label_end_time),
             value = endTime,
             onValueChange = { endTime = it }
         )
 
         OffDaysSelector(
-            title = "Días de libranza fijos",
-            subtitle = "Selecciona días libres semanales (opcional)",
+            title = stringResource(R.string.label_fixed_off_days),
+            subtitle = stringResource(R.string.subtitle_fixed_off_days),
             selectedDays = uiState.offDays,
             disabledDays = uiState.alternateOffDays,
             onDayToggle = { viewModel.toggleFixedOffDay(it) }
         )
 
+        /*  CICLO ALTERNO — OCULTO (UI simplificada, lógica preservada)
         OffDaysSelector(
             title = "Días de libranza alternos",
             subtitle = "Se alternarán con los días fijos según el ciclo",
@@ -126,44 +125,61 @@ fun ScheduleScreen(
             disabledDays = uiState.offDays,
             onDayToggle = { viewModel.toggleAlternateOffDay(it) }
         )
+        */
 
+        /*  CICLO ALTERNO — OCULTO (UI simplificada, lógica preservada)
         WeeksToRotateCard(
             weeks = uiState.weeksToRotate,
             onWeeksChange = { viewModel.setWeeksToRotate(it) }
         )
+        */
 
+        /*  CICLO ALTERNO — OCULTO (UI simplificada, lógica preservada)
         AltReferenceDateCard(
             nextAltReference = uiState.nextAltReference,
             onDateSelected = { viewModel.setNextAltReference(it) }
         )
+        */
 
         Button(
             onClick = {
                 val startH = startTime.substringBefore(":").toIntOrNull() ?: 8
                 val endH = endTime.substringBefore(":").toIntOrNull() ?: 16
-                val dailyMs = parseTimeToMs(endTime) - parseTimeToMs(startTime)
-
-                viewModel.saveConfigHours(startH, endH)
-                viewModel.saveSchedule(
-                    startTime = startTime,
-                    endTime = endTime,
-                    offDays = uiState.offDays,
-                    dailyTargetMs = dailyMs.coerceAtLeast(0L),
-                    weeklyTargetMs = dailyMs.coerceAtLeast(0L) * (7 - uiState.offDays.size)
+                val dailyMs = (parseTimeToMs(endTime) - parseTimeToMs(startTime)).coerceAtLeast(0L)
+                viewModel.saveAllData(
+                    fullName       = driverName,
+                    dni            = driverDni,
+                    startHour      = startH,
+                    endHour        = endH,
+                    startTime      = startTime,
+                    endTime        = endTime,
+                    offDays        = uiState.offDays,
+                    dailyTargetMs  = dailyMs,
+                    weeklyTargetMs = dailyMs * (7 - uiState.offDays.size)
                 )
-                Toast.makeText(context, context.getString(R.string.toast_config_saved), Toast.LENGTH_SHORT).show()
+                Toast.makeText(
+                    context,
+                    context.getString(R.string.toast_config_saved),
+                    Toast.LENGTH_SHORT
+                ).show()
             },
             modifier = Modifier
                 .fillMaxWidth()
                 .height(56.dp),
-            shape = RoundedCornerShape(12.dp),
+            shape = RoundedCornerShape(2.dp),
             colors = ButtonDefaults.buttonColors(
-                containerColor = MaterialTheme.colorScheme.secondary
+                containerColor = CasioColors.legendBlue
             )
         ) {
-            Text(stringResource(R.string.btn_save_schedule), fontSize = 16.sp, fontWeight = FontWeight.Bold)
+            Text(
+                stringResource(R.string.btn_save_data),
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Bold,
+                color = CasioColors.legendGold
+            )
         }
 
+        /*  RESUMEN — OCULTO (UI simplificada, lógica preservada)
         if (uiState.schedule != null) {
             CurrentScheduleCard(
                 schedule = uiState.schedule!!,
@@ -172,6 +188,7 @@ fun ScheduleScreen(
                 nextAltReference = uiState.nextAltReference
             )
         }
+        */
     }
 }
 
@@ -293,9 +310,9 @@ private fun TimePickerCard(
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
+            containerColor = CasioColors.caseResinDark
         ),
-        shape = RoundedCornerShape(12.dp)
+        shape = RoundedCornerShape(2.dp)
     ) {
         Row(
             modifier = Modifier
@@ -319,21 +336,28 @@ private fun TimePickerCard(
                         onValueChange("${String.format(Locale.US, "%02d", newH)}:${parts[1]}")
                     },
                     modifier = Modifier.size(40.dp),
-                    shape = RoundedCornerShape(8.dp),
+                    shape = RoundedCornerShape(2.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant
+                        containerColor = CasioColors.legendBlue
                     )
                 ) {
-                    Text("-", fontSize = 18.sp)
+                    Text("-", fontSize = 18.sp, color = CasioColors.legendGold, fontWeight = FontWeight.Bold)
                 }
 
-                Text(
-                    text = value,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    fontSize = 24.sp,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(horizontal = 12.dp)
-                )
+                Box(
+                    modifier = Modifier
+                        .background(CasioColors.lcdBackground, RoundedCornerShape(2.dp))
+                        .padding(horizontal = 12.dp, vertical = 4.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = value,
+                        color = CasioColors.lcdTextOn,
+                        fontSize = 24.sp,
+                        fontWeight = FontWeight.Bold,
+                        fontFamily = Digital7
+                    )
+                }
 
                 Button(
                     onClick = {
@@ -343,12 +367,12 @@ private fun TimePickerCard(
                         onValueChange("${String.format(Locale.US, "%02d", newH)}:${parts[1]}")
                     },
                     modifier = Modifier.size(40.dp),
-                    shape = RoundedCornerShape(8.dp),
+                    shape = RoundedCornerShape(2.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant
+                        containerColor = CasioColors.legendBlue
                     )
                 ) {
-                    Text("+", fontSize = 18.sp)
+                    Text("+", fontSize = 18.sp, color = CasioColors.legendGold, fontWeight = FontWeight.Bold)
                 }
             }
         }
@@ -370,9 +394,9 @@ private fun OffDaysSelector(
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
+            containerColor = CasioColors.caseResinDark
         ),
-        shape = RoundedCornerShape(12.dp)
+        shape = RoundedCornerShape(2.dp)
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
@@ -403,11 +427,11 @@ private fun OffDaysSelector(
                             .size(44.dp)
                             .background(
                                 color = when {
-                                    isDisabled -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
-                                    isSelected -> MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)
-                                    else -> MaterialTheme.colorScheme.surfaceVariant
+                                    isDisabled -> CasioColors.legendBlue.copy(alpha = 0.2f)
+                                    isSelected -> CasioColors.illuminatorNight
+                                    else -> CasioColors.legendBlue
                                 },
-                                shape = RoundedCornerShape(10.dp)
+                                shape = RoundedCornerShape(2.dp)
                             )
                             .clickable(enabled = !isDisabled) { onDayToggle(day) },
                         contentAlignment = Alignment.Center
@@ -415,9 +439,9 @@ private fun OffDaysSelector(
                         Text(
                             text = label,
                             color = when {
-                                isDisabled -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.25f)
-                                isSelected -> MaterialTheme.colorScheme.primary
-                                else -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                                isDisabled -> CasioColors.legendGold.copy(alpha = 0.2f)
+                                isSelected -> CasioColors.caseResinDark
+                                else -> CasioColors.legendGold
                             },
                             fontWeight = if (isSelected && !isDisabled) FontWeight.Bold else FontWeight.Normal,
                             fontSize = 14.sp
@@ -576,15 +600,14 @@ private fun DriverProfileCard(
     fullName: String,
     dni: String,
     onNameChange: (String) -> Unit,
-    onDniChange: (String) -> Unit,
-    onSave: () -> Unit
+    onDniChange: (String) -> Unit
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
+            containerColor = CasioColors.caseResinDark
         ),
-        shape = RoundedCornerShape(12.dp)
+        shape = RoundedCornerShape(2.dp)
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
@@ -615,19 +638,19 @@ private fun DriverProfileCard(
                     modifier = Modifier
                         .fillMaxWidth()
                         .background(
-                            MaterialTheme.colorScheme.surfaceVariant,
-                            RoundedCornerShape(8.dp)
+                            CasioColors.lcdBackground,
+                            RoundedCornerShape(2.dp)
                         )
                         .padding(12.dp),
                     textStyle = androidx.compose.ui.text.TextStyle(
-                        color = MaterialTheme.colorScheme.onSurface,
+                        color = CasioColors.lcdTextOn,
                         fontSize = 16.sp
                     ),
                     decorationBox = { innerTextField ->
                         if (fullName.isEmpty()) {
                             Text(
                                 text = "Ej: Juan García López",
-                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
+                                color = CasioColors.lcdTextOff,
                                 fontSize = 16.sp
                             )
                         }
@@ -646,19 +669,19 @@ private fun DriverProfileCard(
                     modifier = Modifier
                         .fillMaxWidth()
                         .background(
-                            MaterialTheme.colorScheme.surfaceVariant,
-                            RoundedCornerShape(8.dp)
+                            CasioColors.lcdBackground,
+                            RoundedCornerShape(2.dp)
                         )
                         .padding(12.dp),
                     textStyle = androidx.compose.ui.text.TextStyle(
-                        color = MaterialTheme.colorScheme.onSurface,
+                        color = CasioColors.lcdTextOn,
                         fontSize = 16.sp
                     ),
                     decorationBox = { innerTextField ->
                         if (dni.isEmpty()) {
                             Text(
                                 text = "Ej: 12345678A",
-                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
+                                color = CasioColors.lcdTextOff,
                                 fontSize = 16.sp
                             )
                         }
@@ -667,18 +690,6 @@ private fun DriverProfileCard(
                 )
             }
 
-            Button(
-                onClick = onSave,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(48.dp),
-                shape = RoundedCornerShape(8.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.primary
-                )
-            ) {
-                Text(stringResource(R.string.btn_save_driver), fontSize = 14.sp, fontWeight = FontWeight.Bold)
-            }
         }
     }
 }

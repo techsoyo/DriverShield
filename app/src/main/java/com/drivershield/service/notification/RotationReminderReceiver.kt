@@ -101,6 +101,9 @@ fun scheduleRotationReminder(
     weeksToRotate: Int,
     startHour: Int
 ) {
+    // Desactivado temporalmente por simplificación de UI.
+    return
+
     if (nextAltReferenceEpoch <= 0L || weeksToRotate <= 0) return
 
     val refDate = LocalDate.ofEpochDay(nextAltReferenceEpoch / 86_400_000L)

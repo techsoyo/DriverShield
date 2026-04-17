@@ -20,6 +20,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.drivershield.presentation.theme.CasioColors
 import com.drivershield.presentation.theme.DriverShieldColors
 import com.drivershield.presentation.ui.util.DateTransformation
 import androidx.compose.ui.res.stringResource
@@ -79,13 +80,13 @@ fun ExportScreen(viewModel: ExportViewModel = hiltViewModel()) {
             // ── Título ────────────────────────────────────────────────────
             Text(
                 text = stringResource(R.string.export_title),
-                color = Color.White,
+                color = CasioColors.legendGold,
                 fontWeight = FontWeight.Bold,
                 fontSize = 22.sp
             )
             Text(
                 text = stringResource(R.string.export_subtitle),
-                color = Color.Gray,
+                color = CasioColors.legendGold.copy(alpha = 0.55f),
                 fontSize = 13.sp
             )
 

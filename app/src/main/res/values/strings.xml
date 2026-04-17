@@ -44,10 +44,12 @@
     <!-- Calendario -->
     <string name="calendar_header_vtc">CALENDARIO SEMANAL VTC</string>
     <string name="calendar_status_label">ESTADO</string>
-    <string name="calendar_effective_hours">HORAS EFECTIVAS: %1$d / 40h</string>
+    <string name="calendar_effective_hours">HORAS EFECTIVAS: %1$d / %2$dh</string>
     <string name="calendar_go_to_current_week">Ir a semana actual</string>
     <string name="cd_prev_week">Semana anterior</string>
     <string name="cd_next_week">Semana siguiente</string>
+    <string name="cd_toggle_day_override">Toca para cambiar estado de libranza de este día</string>
+    <string name="calendar_manual_libranza_hint">Libranza manual activa (toca para deshacer)</string>
 
     <!-- Navegación -->
     <string name="screen_dashboard">Dashboard</string>
@@ -111,9 +113,14 @@
     <string name="toast_driver_profile_saved">Datos del conductor guardados</string>
     <string name="toast_config_saved">Configuración guardada</string>
     <string name="btn_save_schedule">Guardar Horario</string>
+    <string name="btn_save_data">Guardar Datos</string>
     <string name="btn_select">Seleccionar</string>
     <string name="btn_accept">Aceptar</string>
     <string name="btn_save_driver">Guardar Datos del Conductor</string>
+    <string name="label_start_time">Hora de inicio</string>
+    <string name="label_end_time">Hora de fin</string>
+    <string name="label_fixed_off_days">Días de libranza fijos</string>
+    <string name="subtitle_fixed_off_days">Selecciona días libres semanales (opcional)</string>
 
     <!-- PDF Exporter -->
     <string name="pdf_title">DriverShield · Informe de Jornada</string>

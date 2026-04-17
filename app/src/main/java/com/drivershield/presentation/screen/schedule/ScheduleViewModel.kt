@@ -82,6 +82,50 @@ class ScheduleViewModel @Inject constructor(
         weeklyTargetMs: Long
     ) {
         viewModelScope.launch {
+            val startH = startTime.substringBefore(":").toIntOrNull() ?: 8
+            val endH   = endTime.substringBefore(":").toIntOrNull() ?: 16
+            val current = uiState.value
+            // Sincronización de Doble Verdad: Room + DataStore juntos
+            sessionDataStore.saveFullConfig(
+                startH, endH,
+                offDays,
+                current.alternateOffDays,
+                current.weeksToRotate
+            )
+            scheduleRepository.saveSchedule(
+                WorkSchedule(
+                    startTime = startTime,
+                    endTime = endTime,
+                    offDays = offDays,
+                    weeklyTargetMs = weeklyTargetMs,
+                    dailyTargetMs = dailyTargetMs,
+                    cycleStartEpoch = 0L
+                )
+            )
+        }
+    }
+
+    /** Persiste de forma atómica: Nombre, DNI, horas y días de libranza fijos.
+     *  Los valores de ciclos alternos se preservan en el DataStore sin modificarse. */
+    fun saveAllData(
+        fullName: String,
+        dni: String,
+        startHour: Int,
+        endHour: Int,
+        startTime: String,
+        endTime: String,
+        offDays: List<Int>,
+        dailyTargetMs: Long,
+        weeklyTargetMs: Long
+    ) {
+        viewModelScope.launch {
+            sessionDataStore.saveDriverProfile(fullName, dni)
+            sessionDataStore.saveFullConfig(
+                startHour, endHour,
+                offDays,
+                uiState.value.alternateOffDays,
+                uiState.value.weeksToRotate
+            )
             scheduleRepository.saveSchedule(
                 WorkSchedule(
                     startTime = startTime,

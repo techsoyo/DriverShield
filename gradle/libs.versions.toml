@@ -2,6 +2,7 @@
 agp = "8.6.1"
 junit-jupiter-api = "5.11.4"
 junit-jupiter-engine = "5.11.4"
+junit-vintage-engine = "5.11.4"
 kotlin = "2.1.0"
 compose-bom = "2025.05.00"
 navigation-compose = "2.8.9"
@@ -26,6 +27,7 @@ compose-ui = { group = "androidx.compose.ui", name = "ui" }
 compose-material3 = { group = "androidx.compose.material3", name = "material3" }
 junit-jupiter-api = { module = "org.junit.jupiter:junit-jupiter-api", version.ref = "junit-jupiter-api" }
 junit-jupiter-engine = { module = "org.junit.jupiter:junit-jupiter-engine", version.ref = "junit-jupiter-engine" }
+junit-vintage-engine = { module = "org.junit.vintage:junit-vintage-engine", version.ref = "junit-vintage-engine" }
 navigation-compose = { group = "androidx.navigation", name = "navigation-compose", version.ref = "navigation-compose" }
 appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }
 
@@ -58,6 +60,7 @@ turbine = { group = "app.cash.turbine", name = "turbine", version.ref = "turbine
 robolectric = { group = "org.robolectric", name = "robolectric", version.ref = "robolectric" }
 mockk = { group = "io.mockk", name = "mockk", version.ref = "mockk" }
 androidx-test-junit = { group = "androidx.test.ext", name = "junit", version.ref = "androidx-test" }
+androidx-test-core = { group = "androidx.test", name = "core", version = "1.6.1" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

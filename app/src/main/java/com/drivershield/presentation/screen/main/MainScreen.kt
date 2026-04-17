@@ -1,145 +1,228 @@
 package com.drivershield.presentation.screen.main
 
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.drivershield.domain.util.CycleCalculator
 import com.drivershield.presentation.component.CasioTimerBox
+import com.drivershield.presentation.theme.CasioColors
 import com.drivershield.service.ShiftState
 import com.drivershield.service.TimerState
 import java.time.LocalDate
 import java.util.Locale
 import java.util.concurrent.TimeUnit
 
-// Paleta Casio Retro - UI/UX Maestro
-private val CasioGreen = Color(0xFF00FF41)
-private val CasioRed = Color(0xFFFF3131)
-private val CasioWhite = Color(0xFFE0E0E0)
-private val CasioBorg = Color(0xFF1A1A1A)
+// Colores funcionales — sólo para las etiquetas de panel, no afectan el LCD
+private val LabelWork   = Color(0xFF00C853)
+private val LabelRest   = Color(0xFFFF6B35)
+private val LabelWeekly = Color(0xFFE0E0E0)
 
 @Composable
 fun MainScreen(
     viewModel: MainViewModel = hiltViewModel()
 ) {
-    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val uiState  by viewModel.uiState.collectAsStateWithLifecycle()
     val schedule by viewModel.schedule.collectAsStateWithLifecycle()
-    val alternateOffDays by viewModel.alternateOffDays.collectAsStateWithLifecycle()
-    val weeksToRotate by viewModel.weeksToRotate.collectAsStateWithLifecycle()
-    val nextAltReference by viewModel.nextAltReference.collectAsStateWithLifecycle()
+    /*  CICLO ALTERNO — DESACTIVADO (simplificación de UI)
+        val alternateOffDays by viewModel.alternateOffDays.collectAsStateWithLifecycle()
+        val weeksToRotate by viewModel.weeksToRotate.collectAsStateWithLifecycle()
+        val nextAltReference by viewModel.nextAltReference.collectAsStateWithLifecycle()
+    */
 
     val today = LocalDate.now()
-    val mondayThisWeek = today.with(java.time.DayOfWeek.MONDAY)
-    val userOffDays = schedule?.offDays ?: emptyList()
-    
-    val refDate: LocalDate? = if (nextAltReference > 0L)
-        LocalDate.ofEpochDay(nextAltReference / 86_400_000L)
-    else null
+    val userOffDays      = schedule?.offDays ?: emptyList()
+    val workDaysThisWeek by viewModel.weeklyWorkDays.collectAsStateWithLifecycle()
+    val isOffDayToday    = userOffDays.contains(today.dayOfWeek.value)
+    val dailyTarget      = schedule?.dailyTargetMs ?: (8L * 60 * 60 * 1000)
+    val weeklyTarget     = if (schedule != null) dailyTarget * workDaysThisWeek else TimerState.MAX_WEEKLY_MS
 
-    val workDaysThisWeek = CycleCalculator.getWorkDaysInWeek(
-        mondayThisWeek, refDate, userOffDays.toSet(), alternateOffDays.toSet(), weeksToRotate
-    )
-
-    val dayStatus = CycleCalculator.getDayStatus(today, refDate, userOffDays.toSet(), alternateOffDays.toSet(), weeksToRotate)
-    val isOffDayToday = CycleCalculator.isOffDay(today, refDate, userOffDays.toSet(), alternateOffDays.toSet(), weeksToRotate)
-    
-    val dailyTarget = schedule?.dailyTargetMs ?: (8L * 60 * 60 * 1000)
-    val weeklyTarget = if (schedule != null) dailyTarget * workDaysThisWeek else TimerState.MAX_WEEKLY_MS
+    // Estado del Illuminator — puramente UI, no persiste en VM
+    var illuminatorOn by remember { mutableStateOf(false) }
+    val isRunning = uiState.shiftState == ShiftState.TRABAJANDO
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black)
+            .background(CasioColors.caseResinDark)
             .verticalScroll(rememberScrollState())
-            .padding(16.dp),
+            .padding(12.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(20.dp)
+        verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        // Indicador de Modo LCD
-        CasioStatusIndicator(state = uiState.shiftState)
+        // Cabecera: indicadores de modo + botón LIGHT
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            CasioModeIndicators(state = uiState.shiftState, illuminatorOn = illuminatorOn)
+            IlluminatorButton(on = illuminatorOn, onToggle = { illuminatorOn = !illuminatorOn })
+        }
 
+        // CICLO ALTERNO: banner solo para días fijos (LIBRE); dayStatus desactivado
         if (isOffDayToday) {
-            CasioOffDayBanner(statusName = dayStatus.name)
+            CasioOffDayBanner(illuminatorOn = illuminatorOn)
         }
 
         // BLOQUE TRABAJO
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            CasioTimerBox("TRABAJO PROG.", formatMs(uiState.workProgressMs), CasioGreen, Modifier.weight(1f))
-            CasioTimerBox("TRABAJO REGR.", formatMs(uiState.workRemainingMs), CasioGreen, Modifier.weight(1f))
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            CasioTimerBox(
+                label = "TRABAJO PROG.", time = formatMs(uiState.workProgressMs),
+                activeColor = LabelWork, isRunning = isRunning,
+                illuminatorOn = illuminatorOn, modifier = Modifier.weight(1f)
+            )
+            CasioTimerBox(
+                label = "TRABAJO REGR.", time = formatMs(uiState.workRemainingMs),
+                activeColor = LabelWork, isRunning = isRunning,
+                illuminatorOn = illuminatorOn, modifier = Modifier.weight(1f)
+            )
         }
 
         // BLOQUE DESCANSO
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            CasioTimerBox("DESCANSO PROG.", formatMs(uiState.restProgressMs), CasioRed, Modifier.weight(1f))
-            CasioTimerBox("DESCANSO REGR.", formatMs(uiState.restRemainingMs), CasioRed, Modifier.weight(1f))
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            CasioTimerBox(
+                label = "DESCANSO PROG.", time = formatMs(uiState.restProgressMs),
+                activeColor = LabelRest, isRunning = isRunning,
+                illuminatorOn = illuminatorOn, modifier = Modifier.weight(1f)
+            )
+            CasioTimerBox(
+                label = "DESCANSO REGR.", time = formatMs(uiState.restRemainingMs),
+                activeColor = LabelRest, isRunning = isRunning,
+                illuminatorOn = illuminatorOn, modifier = Modifier.weight(1f)
+            )
         }
 
-        CasioTimerBox("SEMANAL TOTAL", formatMs(uiState.weeklyProgressMs), CasioWhite, Modifier.fillMaxWidth())
+        CasioTimerBox(
+            label = "SEMANAL TOTAL", time = formatMs(uiState.weeklyProgressMs),
+            activeColor = LabelWeekly, isRunning = isRunning,
+            illuminatorOn = illuminatorOn, modifier = Modifier.fillMaxWidth()
+        )
 
         Spacer(modifier = Modifier.height(4.dp))
 
         CasioActionButtons(
-            state = uiState.shiftState,
-            onStart = { viewModel.startShift() },
-            onPause = { viewModel.pauseShift() },
+            state    = uiState.shiftState,
+            onStart  = { viewModel.startShift() },
+            onPause  = { viewModel.pauseShift() },
             onResume = { viewModel.resumeShift() },
-            onReset = { viewModel.resetShift() }
+            onReset  = { viewModel.resetShift() }
         )
 
         CasioWeeklyFooter(
-            weeklyMs = uiState.weeklyProgressMs,
-            limitMs = weeklyTarget,
-            workDays = workDaysThisWeek
+            weeklyMs      = uiState.weeklyProgressMs,
+            limitMs       = weeklyTarget,
+            workDays      = workDaysThisWeek,
+            illuminatorOn = illuminatorOn
         )
     }
 }
 
+/**
+ * Indicadores de modo tipo cristal LCD: los tres estados siempre visibles.
+ * Estado activo = [lcdTextOn] negrita; inactivo = [lcdTextOff] ("fantasma").
+ */
 @Composable
-private fun CasioStatusIndicator(state: ShiftState) {
-    val (text, color) = when (state) {
-        ShiftState.TRABAJANDO -> "MODE: TRABAJO" to CasioGreen
-        ShiftState.EN_PAUSA -> "MODE: PAUSA" to CasioWhite
-        ShiftState.DETENIDO -> "MODE: STANDBY" to Color.Gray
-    }
-    Box(
+private fun CasioModeIndicators(state: ShiftState, illuminatorOn: Boolean) {
+    val textOn  = if (illuminatorOn) Color(0xFF003344) else CasioColors.lcdTextOn
+    val textOff = if (illuminatorOn) Color(0xFF007090) else CasioColors.lcdTextOff
+    val bgColor by animateColorAsState(
+        targetValue   = if (illuminatorOn) CasioColors.illuminatorNight else CasioColors.lcdBackground,
+        animationSpec = tween(300),
+        label         = "modeBg"
+    )
+    Row(
         modifier = Modifier
-            .border(1.dp, color.copy(alpha = 0.4f), RoundedCornerShape(2.dp))
-            .padding(horizontal = 12.dp, vertical = 4.dp)
+            .background(bgColor, RoundedCornerShape(2.dp))
+            .border(1.dp, CasioColors.legendBlue, RoundedCornerShape(2.dp))
+            .padding(horizontal = 10.dp, vertical = 5.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        verticalAlignment     = Alignment.CenterVertically
     ) {
-        Text(text = text, color = color, fontWeight = FontWeight.Bold, fontSize = 11.sp, letterSpacing = 2.sp)
+        ModeLabel("TRABAJO", state == ShiftState.TRABAJANDO, textOn, textOff)
+        Text("·", color = textOff, fontSize = 10.sp)
+        ModeLabel("PAUSA",   state == ShiftState.EN_PAUSA,   textOn, textOff)
+        Text("·", color = textOff, fontSize = 10.sp)
+        ModeLabel("STANDBY", state == ShiftState.DETENIDO,   textOn, textOff)
     }
 }
 
 @Composable
-private fun CasioOffDayBanner(statusName: String) {
+private fun ModeLabel(label: String, active: Boolean, colorOn: Color, colorOff: Color) {
+    Text(
+        text          = label,
+        color         = if (active) colorOn else colorOff,
+        fontSize      = 9.sp,
+        fontWeight    = if (active) FontWeight.Black else FontWeight.Normal,
+        letterSpacing = 1.sp,
+        fontFamily    = FontFamily.Monospace
+    )
+}
+
+/** Botón LIGHT — imita el iluminador lateral del Casio F-91W */
+@Composable
+private fun IlluminatorButton(on: Boolean, onToggle: () -> Unit) {
+    val borderColor by animateColorAsState(
+        targetValue   = if (on) CasioColors.illuminatorNight else CasioColors.legendGold,
+        animationSpec = tween(300),
+        label         = "lightBorder"
+    )
+    ResinPusher(
+        text     = if (on) "LIGHT ●" else "LIGHT ○",
+        color    = borderColor,
+        onClick  = onToggle,
+        modifier = Modifier
+            .height(30.dp)
+            .width(92.dp),
+        fontSize = 9.sp
+    )
+}
+
+@Composable
+private fun CasioOffDayBanner(illuminatorOn: Boolean) {
+    val bgColor by animateColorAsState(
+        targetValue   = if (illuminatorOn) CasioColors.illuminatorNight.copy(alpha = 0.12f)
+                        else CasioColors.caseResinDark,
+        animationSpec = tween(300),
+        label         = "bannerBg"
+    )
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .background(CasioBorg)
-            .border(1.dp, Color.DarkGray)
+            .background(bgColor, RoundedCornerShape(2.dp))
+            .border(1.dp, CasioColors.legendGold, RoundedCornerShape(2.dp))
             .padding(10.dp)
     ) {
         Text(
-            text = "ESTADO: $statusName",
-            color = CasioWhite,
-            fontWeight = FontWeight.Bold,
-            textAlign = TextAlign.Center,
-            fontSize = 12.sp,
-            modifier = Modifier.fillMaxWidth()
+            text          = "ESTADO: LIBRE",
+            color         = CasioColors.legendGold,
+            fontWeight    = FontWeight.Bold,
+            textAlign     = TextAlign.Center,
+            fontSize      = 11.sp,
+            letterSpacing = 2.sp,
+            fontFamily    = FontFamily.Monospace,
+            modifier      = Modifier.fillMaxWidth()
         )
     }
 }
@@ -153,44 +236,97 @@ private fun CasioActionButtons(
     onReset: () -> Unit
 ) {
     when (state) {
-        ShiftState.DETENIDO -> CasioButton("START / INICIAR", CasioGreen, onStart)
-        ShiftState.TRABAJANDO -> Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            CasioButton("LAP / PAUSA", CasioWhite, onPause, Modifier.weight(1f))
-            CasioButton("STOP / RESET", CasioRed, onReset, Modifier.weight(1f))
+        ShiftState.DETENIDO   -> ResinPusher(
+            "START", Color(0xFF00C853), onStart,
+            Modifier.fillMaxWidth().height(56.dp)
+        )
+        ShiftState.TRABAJANDO -> Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            ResinPusher("LAP",  Color(0xFFE0E0E0), onPause, Modifier.weight(1f).height(56.dp))
+            ResinPusher("STOP", Color(0xFFFF3131), onReset, Modifier.weight(1f).height(56.dp))
         }
-        ShiftState.EN_PAUSA -> Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            CasioButton("RESUME", CasioGreen, onResume, Modifier.weight(1f))
-            CasioButton("FINISH", CasioRed, onReset, Modifier.weight(1f))
+        ShiftState.EN_PAUSA   -> Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            ResinPusher("RESUME", Color(0xFF00C853), onResume, Modifier.weight(1f).height(56.dp))
+            ResinPusher("FINISH", Color(0xFFFF3131), onReset,  Modifier.weight(1f).height(56.dp))
         }
     }
 }
 
+/**
+ * Botón de resina estilo Casio.
+ *
+ * - Esquinas rígidas (4.dp) — sin CircleShape ni RoundedCornerShape(50)
+ * - Feedback háptico en cada pulsación
+ * - Estado presionado detectado vía [InteractionSource] (fondo semitransparente)
+ * - Sin elevación ni sombra difusa Material
+ */
 @Composable
-private fun CasioButton(text: String, color: Color, onClick: () -> Unit, modifier: Modifier = Modifier) {
-    OutlinedButton(
-        onClick = onClick,
-        modifier = modifier.height(54.dp),
-        shape = RoundedCornerShape(4.dp),
-        border = androidx.compose.foundation.BorderStroke(2.dp, color),
-        colors = ButtonDefaults.outlinedButtonColors(contentColor = color)
+private fun ResinPusher(
+    text: String,
+    color: Color,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    fontSize: TextUnit = 14.sp
+) {
+    val haptic            = LocalHapticFeedback.current
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed         by interactionSource.collectIsPressedAsState()
+
+    val bgColor by animateColorAsState(
+        targetValue   = if (isPressed) color.copy(alpha = 0.20f) else Color.Transparent,
+        animationSpec = tween(80),
+        label         = "btnBg"
+    )
+
+    Box(
+        modifier = modifier
+            .background(bgColor, RoundedCornerShape(4.dp))
+            .border(2.dp, color, RoundedCornerShape(4.dp))
+            .clickable(interactionSource = interactionSource, indication = null) {
+                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                onClick()
+            },
+        contentAlignment = Alignment.Center
     ) {
-        Text(text = text.uppercase(), fontSize = 13.sp, fontWeight = FontWeight.Black)
+        Text(
+            text          = text.uppercase(),
+            color         = color,
+            fontSize      = fontSize,
+            fontWeight    = FontWeight.Black,
+            letterSpacing = 2.sp,
+            fontFamily    = FontFamily.Monospace
+        )
     }
 }
 
 @Composable
-private fun CasioWeeklyFooter(weeklyMs: Long, limitMs: Long, workDays: Int) {
+private fun CasioWeeklyFooter(weeklyMs: Long, limitMs: Long, workDays: Int, illuminatorOn: Boolean) {
     val progress = if (limitMs > 0) weeklyMs.toFloat() / limitMs else 0f
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    val barColor = when {
+        progress > 0.9f  -> Color(0xFFFF3131)
+        progress > 0.75f -> CasioColors.legendGold
+        else             -> Color(0xFF00C853)
+    }
+    val textColor by animateColorAsState(
+        targetValue   = if (illuminatorOn) Color(0xFF003344) else CasioColors.lcdTextOff,
+        animationSpec = tween(300),
+        label         = "footerText"
+    )
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         LinearProgressIndicator(
-            progress = { progress.coerceIn(0f, 1f) },
-            modifier = Modifier.fillMaxWidth().height(8.dp),
-            color = if (progress > 0.9f) CasioRed else CasioGreen,
-            trackColor = CasioBorg
+            progress   = { progress.coerceIn(0f, 1f) },
+            modifier   = Modifier
+                .fillMaxWidth()
+                .height(6.dp),
+            color      = barColor,
+            trackColor = CasioColors.caseResinDark
         )
         Text(
-            text = "${formatMs(weeklyMs)} / ${formatMs(limitMs)} ($workDays DAYS)",
-            color = Color.Gray, fontSize = 10.sp, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth()
+            text       = "${formatMs(weeklyMs)} / ${formatMs(limitMs)} [$workDays DAYS]",
+            color      = textColor,
+            fontSize   = 10.sp,
+            textAlign  = TextAlign.Center,
+            fontFamily = FontFamily.Monospace,
+            modifier   = Modifier.fillMaxWidth()
         )
     }
 }
