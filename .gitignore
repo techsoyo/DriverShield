@@ -45,6 +45,11 @@ google-services.json
 # ── Logs y volcados ─────────────────────────────────────────
 *.log
 *.hprof
+compile_log.txt
+ksp_log.txt
+
+# ── Notas personales / docs de trabajo ──────────────────────
+# docs/ se trackea — contiene documentación técnica del proyecto
 
 # ── macOS ───────────────────────────────────────────────────
 .DS_Store

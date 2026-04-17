@@ -5,6 +5,15 @@
       "release-type": "simple",
       "extra-files": [
         "app/build.gradle.kts"
+      ],
+      "changelog-sections": [
+        {"type": "feat",     "section": "Features"},
+        {"type": "fix",      "section": "Bug Fixes"},
+        {"type": "perf",     "section": "Performance"},
+        {"type": "refactor", "section": "Code Refactoring"},
+        {"type": "docs",     "section": "Documentation", "hidden": true},
+        {"type": "test",     "section": "Tests",         "hidden": true},
+        {"type": "chore",    "section": "Miscellaneous",  "hidden": true}
       ]
     }
   }

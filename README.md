@@ -1,85 +1,54 @@
 # DriverShield
 
-**Companion app para conductores VTC y camioneros** que automatiza el registro de jornada laboral con
-precisión milimétrica, generación de evidencia inmutable y alertas legales en tiempo real.
+![CI](https://github.com/ebAutomationAi/DriverShield/actions/workflows/ci.yml/badge.svg)
+![Version](https://img.shields.io/badge/version-1.0.0-blue)
+![Min SDK](https://img.shields.io/badge/min%20SDK-26-green)
+![License](https://img.shields.io/badge/license-Proprietary-red)
 
-> Cumple con el **RDL 8/2019** (registro horario en España), la **Directiva 2003/88/CE** (tiempo de trabajo)
-> y el **Reglamento (CE) 561/2006** (tiempos de conducción y descanso).
+Registro de jornada laboral para conductores VTC y camioneros. Cronómetro persistente con alertas legales en tiempo real y exportación de evidencia.
 
----
-
-## Visión General
-
-| Característica | Detalle |
-|---|---|
-| Registro de jornada | Cronómetro de precisión con WakeLock, sobrevive a reinicios |
-| Alertas legales | AlarmManager (inmune a Doze Mode) a 4h, 6h, 8h diario y 38h, 40h semanal |
-| Evidencia de integridad | Flag `isTampered` si se detecta manipulación del reloj del sistema |
-| Historial semanal | Agrupación ISO por semanas con acumulado progresivo |
-| Exportación | PDF (iText7, estructura semanal + hash SHA-256) y CSV (datos crudos epoch) |
-| Calendario | Vista semanal deslizable ±2/3 meses con grid de bloques horarios |
-| Eficiencia energética | Cero escrituras a Room durante el tick; todo OLTP en memoria |
+Cumple con el **RDL 8/2019** (registro horario en España), la **Directiva 2003/88/CE** (tiempo de trabajo) y el **Reglamento (CE) 561/2006** (tiempos de conducción y descanso).
 
 ---
 
-## Stack Tecnológico
+## Qué problema resuelve
 
-| Capa | Tecnología |
-|---|---|
-| UI | Jetpack Compose · Material3 · HorizontalPager |
-| Arquitectura | MVVM + Clean Architecture (domain / data / presentation) |
-| Inyección de dependencias | Hilt 2.56 |
-| Base de datos local | Room 2.7 (Event Sourcing ligero) |
-| Persistencia de configuración | DataStore Preferences |
-| Navegación | Navigation Compose 2.8 |
-| Generación de PDF | iText7 (kernel + layout + io) |
-| Concurrencia | Kotlin Coroutines · StateFlow · Flow |
-| Testing | JUnit 5 · MockK · Turbine · Robolectric |
-| Build | Gradle Kotlin DSL · KSP · AGP 8.5 |
-| Min SDK | 26 (Android 8.0) |
-| Compile SDK | 35 (Android 15) |
-| Target SDK | 35 (Android 15) |
+Los conductores profesionales están obligados por ley a registrar su jornada con precisión. Una app genérica de temporizador no detecta manipulaciones de reloj, no genera evidencia legal válida ni avisa cuando se acerca a los límites legales (8h/día, 40h/semana). DriverShield automatiza todo eso: registra con `WakeLock` para sobrevivir en segundo plano, marca el turno como `isTampered` si se manipula el reloj del sistema, y exporta un PDF firmado con hash SHA-256.
 
 ---
 
-## Requisitos Previos
+## Requisitos previos
 
-- **Android Studio** Hedgehog (2023.1.1) o superior
-- **JDK 17**
-- **Android SDK** con API 35 instalada
-- Dispositivo o emulador con API ≥ 26
+- **Android Studio** Meerkat (2024.3.1) o superior
+- **JDK 17** (el proyecto usa `jvmTarget = "17"`)
+- **Android SDK** con API 35 instalada (compileSdk = 35)
+- Dispositivo físico o emulador con **API ≥ 26** (Android 8.0)
+- **Git** instalado en el sistema
 
 ---
 
-## Instalación y Ejecución
+## Instalación paso a paso
 
 ```bash
 # 1. Clonar el repositorio
-git clone https://github.com/tu-org/DriverShield.git
+git clone https://github.com/ebAutomationAi/DriverShield.git
 cd DriverShield
 
-# 2. Build de debug
+# 2. Compilar el APK de debug
 ./gradlew assembleDebug
 
-# 3. Instalar en dispositivo conectado por ADB
+# 3. Instalar en el dispositivo conectado por ADB
 ./gradlew installDebug
 
-# 4. Ejecutar todos los tests unitarios
-./gradlew test
-
-# 5. Ejecutar un test concreto
-./gradlew test --tests "com.drivershield.domain.usecase.CheckLegalLimitsUseCaseTest"
-
-# 6. Lint
-./gradlew lint
-
-# 7. Build de release (requiere keystore configurado en local.properties)
-./gradlew assembleRelease
+# 4. Abrir la app en el dispositivo
+adb shell am start -n com.drivershield/.presentation.screen.main.MainActivity
 ```
 
-### Configuración de Keystore (release)
+> **Windows:** usar `gradlew.bat` en lugar de `./gradlew` si no tienes Git Bash.
 
-Añadir en `local.properties` (no commitar):
+### Build de release (requiere keystore)
+
+Añadir en `local.properties` (no commitear este archivo):
 
 ```properties
 RELEASE_STORE_FILE=../keystore/drivershield.jks
@@ -88,71 +57,130 @@ RELEASE_KEY_ALIAS=drivershield
 RELEASE_KEY_PASSWORD=tu_key_password
 ```
 
+```bash
+./gradlew assembleRelease
+```
+
 ---
 
-## Mapa del Proyecto
+## Cómo ejecutar los tests
 
+```bash
+# Todos los tests unitarios (77 tests, ~15 segundos)
+./gradlew testDebugUnitTest
+
+# Un test concreto
+./gradlew testDebugUnitTest --tests "com.drivershield.domain.usecase.StartShiftUseCaseTest"
+
+# Análisis estático (lint)
+./gradlew lintDebug
+
+# Lint + tests en un solo comando (mismo orden que CI)
+./gradlew lintDebug testDebugUnitTest
 ```
+
+Los resultados de los tests se generan en:
+`app/build/reports/tests/testDebugUnitTest/index.html`
+
+---
+
+## Variables de entorno
+
+Esta aplicación no requiere ninguna variable de entorno. Es **100% offline** — no hay servidor, no hay API key, no hay telemetría. Todos los datos se almacenan en la base de datos Room local del dispositivo.
+
+| Variable     | Requerida | Propósito                                    |
+| ------------ | --------- | -------------------------------------------- |
+| _(ninguna)_  | —         | La app funciona sin configuración de entorno |
+
+> Para CI/CD, el workflow de Release Please usa `GITHUB_TOKEN` (inyectado automáticamente por GitHub Actions — no hay que configurarlo).
+
+---
+
+## Política de versiones
+
+Versionado semántico automático gestionado por [Release Please](https://github.com/googleapis/release-please).
+
+| Tipo de commit | Impacto en versión | Ejemplo |
+| --- | --- | --- |
+| `feat:` | `MINOR` (0.x.0 a 0.x+1.0) | Nueva pantalla de estadísticas |
+| `fix:` | `PATCH` (0.0.x a 0.0.x+1) | Corrección de timer al reiniciar |
+| `feat!:` o `BREAKING CHANGE:` | `MAJOR` (x.0.0 a x+1.0.0) | Cambio de esquema de BD incompatible |
+| `chore:`, `docs:`, `test:` | Sin cambio de versión | Actualización de dependencias |
+
+El `CHANGELOG.md` y la etiqueta de release se generan automáticamente en cada merge a `main` que incluya commits de tipo `feat` o `fix`.
+
+---
+
+## Árbol de archivos
+
+```text
 app/src/main/java/com/drivershield/
 │
-├── data/                              # Capa de datos
+├── core/                              # Utilidades y extensiones transversales
+│   ├── di/                            # Módulo Hilt de utilidades comunes
+│   ├── extensions/                    # Extensiones Kotlin (Context, Flow, etc.)
+│   ├── model/                         # Modelos compartidos entre capas
+│   └── utils/                         # Helpers de fecha, formato, etc.
+│
+├── data/                              # Capa de datos (Room + DataStore)
 │   ├── local/
 │   │   ├── db/
-│   │   │   ├── dao/
-│   │   │   │   ├── ShiftDao.kt        # CRUD sesiones + @Transaction endSession
-│   │   │   │   ├── ShiftEventDao.kt   # Log de eventos append-only
-│   │   │   │   ├── WeeklyAggregateDao.kt
-│   │   │   │   └── WorkScheduleDao.kt
-│   │   │   ├── entity/
-│   │   │   │   ├── ShiftSessionEntity.kt   # isTampered, isoYear, isoWeekNumber
-│   │   │   │   └── ShiftEventEntity.kt     # timestamp + elapsedRealtime
-│   │   │   └── AppDatabase.kt         # Room v7, migraciones 1→7
+│   │   │   ├── dao/                   # ShiftDao, ShiftEventDao, WeeklyAggregateDao,
+│   │   │   │                          # WorkScheduleDao, DayOverrideDao
+│   │   │   ├── entity/                # ShiftSessionEntity, ShiftEventEntity,
+│   │   │   │                          # WeeklyAggregateEntity, WorkScheduleEntity,
+│   │   │   │                          # DayOverrideEntity
+│   │   │   ├── migration/             # Migraciones Room v1→v7
+│   │   │   └── AppDatabase.kt         # Room singleton, version 7
 │   │   └── datastore/
-│   │       └── SessionDataStore.kt    # Estado volátil del turno activo
+│   │       └── SessionDataStore.kt    # Estado volátil del turno activo (cero I/O)
 │   └── repository/
-│       └── impl/
-│           └── ShiftRepositoryImpl.kt # getAllSessionsWithEvents() → List<DayReport>
+│       └── impl/                      # ShiftRepositoryImpl, ScheduleRepositoryImpl,
+│                                      # DayOverrideRepositoryImpl
 │
-├── domain/                            # Lógica de negocio pura (sin Android)
+├── di/                                # Módulos Hilt de toda la app
+│   ├── DatabaseModule.kt              # Provee AppDatabase y todos los DAOs
+│   └── RepositoryModule.kt            # Vincula interfaces → implementaciones
+│
+├── domain/                            # Lógica de negocio pura (sin dependencias Android)
 │   ├── export/
 │   │   ├── PdfExporter.kt             # iText7, tablas semanales, hash SHA-256
-│   │   └── CsvExporter.kt             # Epoch timestamps, resumen semanal
-│   ├── model/
-│   │   ├── DayReport.kt
-│   │   ├── SessionReport.kt
-│   │   └── DriverProfile.kt
-│   ├── repository/
-│   │   └── ShiftRepository.kt         # Interfaz (inversión de dependencias)
+│   │   └── CsvExporter.kt             # Epoch timestamps, datos crudos
+│   ├── model/                         # ShiftSession, ShiftType, WeeklyReport,
+│   │                                  # DailyReport, DayOverride, WorkSchedule
+│   ├── repository/                    # Interfaces: ShiftRepository,
+│   │                                  # ScheduleRepository, DayOverrideRepository
+│   ├── usecase/                       # StartShiftUseCase, EndShiftUseCase,
+│   │                                  # GenerateReportUseCase, ToggleDayOverrideUseCase
 │   └── util/
-│       ├── WorkLimits.kt              # Constantes y validadores legales
-│       └── CycleCalculator.kt         # Cálculo de ciclos de libranza
+│       ├── WorkLimits.kt              # Constantes legales (8h/día, 40h/semana)
+│       ├── CycleCalculator.kt         # Cálculo de semanas ISO
+│       ├── NightShiftSplitter.kt      # Redistribuye horas nocturnas al día correcto
+│       └── TimeConverter.kt           # Conversión epoch ↔ LocalDate / Instant
 │
 ├── presentation/                      # Capa UI (Compose + ViewModels)
+│   ├── component/                     # CasioTimerBox, LongPressButton, DigitalDisplay
+│   ├── navigation/                    # NavHost, rutas, bottom navigation
 │   ├── screen/
-│   │   ├── main/
-│   │   │   ├── DriverShieldApp.kt     # NavHost + DrawerLayout
-│   │   │   └── MainScreen.kt          # Dashboard con contadores en tiempo real
-│   │   ├── calendar/
-│   │   │   ├── CalendarScreen.kt      # HorizontalPager, 23 semanas deslizables
-│   │   │   └── CalendarViewModel.kt   # selectedPage, weekOffset
-│   │   ├── history/
-│   │   │   ├── HistoryScreen.kt       # Acordeón semanal, filtro por rango
-│   │   │   └── HistoryViewModel.kt    # WeekSummary, DayProgressive, isTampered
-│   │   ├── export/
-│   │   │   ├── ExportScreen.kt        # Campos de fecha, botones PDF/CSV
-│   │   │   └── ExportViewModel.kt     # ExportState, FileProvider intent
-│   │   └── schedule/
-│   │       └── ScheduleScreen.kt      # Configuración de horarios
+│   │   ├── main/                      # Dashboard: timer, contadores trabajo/descanso
+│   │   ├── calendar/                  # Pager 23 semanas, toggle de libranzas
+│   │   ├── history/                   # Acordeón semanal, advertencia isTampered
+│   │   ├── export/                    # Selector de rango, botones PDF/CSV
+│   │   └── schedule/                  # Configuración de horario y días libres
 │   └── theme/
-│       └── DriverShieldColors.kt      # Paleta AMOLED (#000000 background)
+│       ├── Color.kt                   # Paleta AMOLED + paleta Casio LCD
+│       ├── Theme.kt                   # MaterialTheme dark con colores Casio
+│       ├── CasioFont.kt               # FontFamily Digital7 (7 segmentos)
+│       └── Type.kt                    # Tipografía Material3
 │
 └── service/                           # Servicios background
-    ├── TimerService.kt                # Foreground service, WakeLock, ticker 1s
+    ├── TimerService.kt                # Foreground Service, WakeLock, ticker 1s
     ├── BootReceiver.kt                # Restaura turno activo tras reinicio
     ├── TimerStateManager.kt           # StateFlow en memoria (cero I/O en tick)
     └── notification/
-        ├── AlertScheduler.kt          # setAlarmClock (inmune a Doze)
-        └── AlertReceiver.kt           # Maneja las alarmas legales disparadas
+        ├── AlertScheduler.kt          # AlarmManager exacto, inmune a Doze Mode
+        ├── AlertReceiver.kt           # Maneja alarmas legales (4h, 6h, 8h, 38h, 40h)
+        └── RotationReminderReceiver.kt # Recordatorios de rotación (reservado v2)
 ```
 
 ---
@@ -160,48 +188,45 @@ app/src/main/java/com/drivershield/
 ## Permisos de Android
 
 | Permiso | Justificación |
-|---|---|
-| `FOREGROUND_SERVICE` | Mantener el cronómetro activo |
-| `FOREGROUND_SERVICE_SPECIAL_USE` | API 34: categoría de servicio primero plano |
-| `WAKE_LOCK` | Evitar suspensión de CPU durante el turno |
-| `RECEIVE_BOOT_COMPLETED` | Restaurar turno activo tras reinicio |
-| `SCHEDULE_EXACT_ALARM` | Alarmas legales exactas (Doze-exempt) |
-| `REQUEST_INSTALL_PACKAGES` | Actualizaciones in-app (si aplica) |
-| `WRITE/READ_EXTERNAL_STORAGE` | Exportación en Android ≤ 9/12 |
-
----
-
-## Modelo de Datos Simplificado
-
-```
-shift_sessions (cabecera del turno)
-  id, startTimestamp, endTimestamp, durationMs,
-  isoYear, isoWeekNumber, type, isTampered
-
-shift_events (log inmutable append-only)
-  id, sessionId → shift_sessions.id (CASCADE),
-  eventType, timestamp, elapsedRealtime, isSystemTimeReliable
-```
+| --- | --- |
+| `FOREGROUND_SERVICE` | Mantener el cronómetro activo en segundo plano |
+| `FOREGROUND_SERVICE_DATA_SYNC` | Tipo requerido en API 34+ para servicios de datos |
+| `WAKE_LOCK` | Evitar que la CPU entre en suspensión durante el turno |
+| `RECEIVE_BOOT_COMPLETED` | Restaurar turno activo tras reinicio del dispositivo |
+| `SCHEDULE_EXACT_ALARM` | Alarmas legales exactas (no afectadas por Doze Mode) |
+| `USE_EXACT_ALARM` | Alternativa a `SCHEDULE_EXACT_ALARM` para ciertos fabricantes |
+| `POST_NOTIFICATIONS` | Notificación persistente del timer (requerido Android 13+) |
+| `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` | Solicitar excepción de batería al usuario |
+| `WRITE/READ_EXTERNAL_STORAGE` | Exportación de archivos en Android ≤ 12 |
 
 ---
 
 ## Conventional Commits
 
-El proyecto usa [Conventional Commits](https://www.conventionalcommits.org/):
-
 ```
-feat: nueva funcionalidad
-fix: corrección de bug
-chore: tareas de build/mantenimiento sin cambio de lógica
-docs: documentación
-refactor: refactorización sin cambio de comportamiento
-test: añadir o modificar tests
+feat:     nueva funcionalidad        → incrementa versión MINOR
+fix:      corrección de bug          → incrementa versión PATCH
+feat!:    cambio incompatible        → incrementa versión MAJOR
+chore:    mantenimiento/build        → sin cambio de versión
+docs:     documentación              → sin cambio de versión
+refactor: sin cambio de lógica       → sin cambio de versión
+test:     añadir o modificar tests   → sin cambio de versión
+perf:     mejora de rendimiento      → sin cambio de versión
 ```
 
-El archivo `CHANGELOG.md` se genera automáticamente por el workflow de CI/CD en cada release.
+El `CHANGELOG.md` se genera automáticamente por Release Please en cada merge a `main`.
+
+---
+
+## Documentación adicional
+
+| Documento | Descripción |
+| --- | --- |
+| [docs/EXPORT_FORMATS.md](docs/EXPORT_FORMATS.md) | Estructura y campos de los archivos PDF y CSV exportados |
+| [spec.md](spec.md) | Especificación técnica completa: arquitectura, modelo de datos, decisiones de diseño |
 
 ---
 
 ## Licencia
 
-Propietaria · © 2026 DriverShield Team · Todos los derechos reservados.
+Propietaria · © 2026 DriverShield · Todos los derechos reservados.
