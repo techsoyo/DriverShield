@@ -60,108 +60,142 @@
 ```text
 app/src/main/java/com/drivershield/
 │
+├── DriverShieldApp.kt                       # @HiltAndroidApp — Application entry point
+│
 ├── core/                                    # Utilidades transversales
 │   ├── di/
 │   │   ├── AppModule.kt                     # Hilt: Room, DataStore, AlarmManager
 │   │   └── ServiceModule.kt                 # Hilt: TimerService bindings
-│   ├── extensions/                          # TimeExtensions.kt, etc.  [pendiente]
 │   ├── model/
 │   │   ├── ShiftSession.kt                  # Alias plano para acceso transversal
 │   │   └── ShiftType.kt
 │   └── utils/
-│       ├── Constants.kt                     # MAX_SHIFT_MS, MAX_WEEKLY_MS, etc.
-│       └── Helpers.kt
+│       └── Constants.kt                     # Constantes de tiempo compartidas
 │
-├── data/                                    # Capa de datos
+├── data/                                    # Capa de datos (Room + DataStore)
 │   ├── local/
 │   │   ├── db/
-│   │   │   ├── AppDatabase.kt               # RoomDatabase singleton  [pendiente]
+│   │   │   ├── AppDatabase.kt               # RoomDatabase singleton, version 7
 │   │   │   ├── dao/
-│   │   │   │   ├── ShiftDao.kt
-│   │   │   │   └── WeeklyDao.kt
+│   │   │   │   ├── ShiftDao.kt              # @Transaction endSession, getWeeklyWorkMs
+│   │   │   │   ├── ShiftEventDao.kt         # Log append-only de eventos
+│   │   │   │   ├── WeeklyAggregateDao.kt    # Upsert de agregados semanales
+│   │   │   │   ├── WorkScheduleDao.kt       # CRUD de configuración de horario
+│   │   │   │   └── DayOverrideDao.kt        # CRUD de overrides por fecha
 │   │   │   ├── entity/
-│   │   │   │   ├── ShiftSessionEntity.kt
-│   │   │   │   └── WeeklyAggregateEntity.kt [pendiente]
+│   │   │   │   ├── ShiftSessionEntity.kt    # isTampered, isoYear, isoWeekNumber
+│   │   │   │   ├── ShiftEventEntity.kt      # timestamp + elapsedRealtime
+│   │   │   │   ├── WeeklyAggregateEntity.kt # PK compuesta (isoYear, isoWeekNumber)
+│   │   │   │   ├── WorkScheduleEntity.kt    # offDays serializado como JSON
+│   │   │   │   └── DayOverrideEntity.kt     # date (PK) + isLibranza
 │   │   │   └── migration/
-│   │   │       └── Migration1.kt            # Schema v1 → v2
+│   │   │       └── Migration1.kt            # Migraciones schema v1→v7
 │   │   └── datastore/
-│   │       └── SessionDataStore.kt          # Estado efímero de sesión activa
+│   │       └── SessionDataStore.kt          # Estado volátil de sesión activa (cero I/O)
 │   └── repository/
-│       ├── impl/
-│       │   ├── ShiftRepositoryImpl.kt
-│       │   └── WeeklyRepositoryImpl.kt      [pendiente]
-│       └── interface/
-│           ├── ShiftRepository.kt
-│           └── ExportRepository.kt
+│       └── impl/
+│           ├── ShiftRepositoryImpl.kt       # getAllSessionsWithEvents → List<DayReport>
+│           ├── ScheduleRepositoryImpl.kt    # WorkSchedule CRUD + Flow
+│           └── DayOverrideRepositoryImpl.kt # Upsert/delete por LocalDate
+│
+├── di/                                      # Módulos Hilt de la app
+│   ├── RepositoryModule.kt                  # Vincula interfaces → implementaciones
+│   └── ServiceModule.kt
 │
 ├── domain/                                  # Reglas de negocio puras (sin Android SDK)
+│   ├── export/
+│   │   ├── PdfExporter.kt                   # iText7, tablas semanales, hash SHA-256
+│   │   └── CsvExporter.kt                   # Epoch timestamps, resumen semanal
 │   ├── model/
-│   │   ├── ShiftSession.kt
-│   │   ├── ShiftType.kt                     # Enum: NORMAL | EXTENDED | NIGHT | SPLIT
-│   │   └── WeeklySummary.kt                 [pendiente]
+│   │   ├── ShiftSession.kt                  # isActive, durationMillis (computed)
+│   │   ├── ShiftType.kt                     # Enum: NORMAL | EXTENDED | NIGHT | SPLIT | REST
+│   │   ├── ShiftEvent.kt + EventType.kt
+│   │   ├── WeeklyReport.kt + DailyReport.kt
+│   │   ├── DayReport.kt + SessionReport.kt  # Agrupación para historial y export
+│   │   ├── WorkSchedule.kt                  # dailyTargetMs + offDays: List<Int>
+│   │   ├── DayOverride.kt                   # date: LocalDate + isLibranza: Boolean
+│   │   └── DriverProfile.kt                 # Reservado para v2
 │   ├── repository/
-│   │   ├── ShiftRepository.kt               # Interfaz de dominio
-│   │   └── WeeklyRepository.kt              [pendiente]
-│   └── usecase/
-│       ├── StartShiftUseCase.kt
-│       ├── EndShiftUseCase.kt
-│       ├── CheckLegalLimitsUseCase.kt
-│       ├── StartRestUseCase.kt              [pendiente]
-│       ├── GetCurrentTimerStateUseCase.kt   [pendiente]
-│       ├── GetWeeklySummaryUseCase.kt       [pendiente]
-│       └── ResetWeeklyCounterUseCase.kt     [pendiente]
+│   │   ├── ShiftRepository.kt               # Interfaz de dominio (suspend + Flow)
+│   │   ├── ScheduleRepository.kt            # Interfaz de horario
+│   │   └── DayOverrideRepository.kt         # Interfaz de overrides de calendario
+│   ├── usecase/
+│   │   ├── StartShiftUseCase.kt             # INSERT sesión activa
+│   │   ├── EndShiftUseCase.kt               # @Transaction cierre con isTampered
+│   │   ├── GenerateReportUseCase.kt         # PDF/CSV con NightShiftSplitter
+│   │   └── ToggleDayOverrideUseCase.kt      # Toggle libranza + limpieza de redundantes
+│   └── util/
+│       ├── WorkLimits.kt                    # MAX_WORK_DAY_MS (8h), MAX_REST_SHIFT_MS (4h)
+│       ├── CycleCalculator.kt               # Motor de libranza por desplazamiento
+│       ├── NightShiftSplitter.kt            # Distribuye ms nocturnos por día natural
+│       └── TimeConverter.kt                 # epoch ↔ HH:mm (zona local)
 │
-├── service/                                 # Foreground Service
-│   ├── TimerService.kt                      # WakeLock + contadores + notificación
-│   ├── TimerServiceConnection.kt            # Binding helper para UI  [pendiente]
-│   └── notification/
-│       ├── AlertScheduler.kt
-│       └── NotificationHelper.kt            [pendiente]
+├── presentation/                            # UI Compose + ViewModels
+│   ├── MainActivity.kt                      # @AndroidEntryPoint, single Activity
+│   ├── component/
+│   │   ├── CasioTimerBox.kt                 # Contenedor LCD 7-segmentos con estilo Casio
+│   │   ├── DigitalDisplay.kt                # Texto formateado en fuente Digital7
+│   │   ├── LongPressButton.kt               # 1500 ms hold + animación + haptic
+│   │   └── TimerDisplay.kt                  # Contador HH:MM:SS
+│   ├── screen/
+│   │   ├── main/
+│   │   │   ├── DriverShieldApp.kt           # NavHost + BottomNavigation
+│   │   │   ├── MainScreen.kt                # Dashboard: timer, contadores work/rest/weekly
+│   │   │   └── MainViewModel.kt             # startShift, pauseShift, stopShift
+│   │   ├── calendar/
+│   │   │   ├── CalendarScreen.kt            # HorizontalPager 23 semanas, toggle libranzas
+│   │   │   └── CalendarViewModel.kt         # selectedPage, weekOffset, overrides
+│   │   ├── history/
+│   │   │   ├── HistoryScreen.kt             # Acordeón semanal, advertencia isTampered
+│   │   │   ├── HistoryViewModel.kt          # getAllSessionsWithEvents → agrupado por fecha
+│   │   │   └── EditShiftViewModel.kt        # Edición manual de hora inicio/fin
+│   │   ├── export/
+│   │   │   ├── ExportScreen.kt              # Selector de rango, botones PDF/CSV
+│   │   │   └── ExportViewModel.kt           # GenerateReportUseCase + FileProvider intent
+│   │   └── schedule/
+│   │       ├── ScheduleScreen.kt            # Configuración diaria + días libres fijos
+│   │       └── ScheduleViewModel.kt         # saveSchedule, offDays toggle
+│   ├── theme/
+│   │   ├── Color.kt                         # Paleta AMOLED + paleta Casio LCD
+│   │   ├── Theme.kt                         # MaterialTheme dark con colores Casio
+│   │   ├── CasioFont.kt                     # FontFamily Digital7 (TTF, 7 segmentos)
+│   │   └── Type.kt                          # Tipografía Material3
+│   └── widget/
+│       └── AppWidgetProvider.kt             # Reservado para v1.1
 │
-└── presentation/                            # UI Compose
-    ├── MainActivity.kt                      [pendiente]
-    ├── navigation/
-    │   └── AppNavHost.kt
-    ├── screen/
-    │   ├── dashboard/
-    │   │   ├── DashboardScreen.kt
-    │   │   └── DashboardViewModel.kt
-    │   ├── history/
-    │   │   ├── HistoryScreen.kt
-    │   │   └── HistoryViewModel.kt
-    │   └── calendar/
-    │       ├── CalendarScreen.kt
-    │       └── CalendarViewModel.kt
-    ├── component/
-    │   ├── LongPressButton.kt
-    │   ├── TimerDisplay.kt
-    │   ├── WeeklyProgressBar.kt             [pendiente]
-    │   └── StatusChip.kt                   [pendiente]
-    ├── theme/
-    │   ├── Color.kt
-    │   ├── Type.kt
-    │   └── Theme.kt                        [pendiente]
-    └── widget/
-        └── AppWidgetProvider.kt             # Reservado para v1.1
+└── service/                                 # Servicios background
+    ├── TimerService.kt                      # Foreground Service, PARTIAL_WAKE_LOCK 14h
+    ├── TimerStateManager.kt                 # StateFlow singleton en memoria (cero I/O)
+    ├── ShiftState.kt                        # Enum: IDLE | TRABAJANDO | DESCANSANDO | LIBRE
+    ├── BootReceiver.kt                      # Restaura turno activo tras reinicio
+    └── notification/
+        ├── AlertScheduler.kt                # AlarmManager exacto (4h, 6h, 8h, 38h, 40h)
+        ├── AlertReceiver.kt                 # Maneja las alarmas legales disparadas
+        ├── NotificationHelper.kt            # Construye notificación persistente + alertas
+        └── RotationReminderReceiver.kt      # Recordatorios de rotación (reservado v2)
 
 app/src/main/res/
+├── font/
+│   └── digital7.ttf                         # Fuente 7-segmentos LCD (estética Casio)
 ├── drawable/                                # ic_launcher, fondos AMOLED
 └── values/
-    ├── colors.xml
-    ├── strings.xml
+    ├── strings.xml                          # Todos los textos UI externalizados
     └── themes.xml
 
-app/src/test/java/com/drivershield/          # Unit tests  [pendiente]
+app/src/test/java/com/drivershield/
+├── data/
+│   ├── local/db/dao/DayOverrideDaoTest.kt
+│   └── repository/impl/DayOverrideRepositoryImplTest.kt
+└── domain/
     ├── usecase/
     │   ├── StartShiftUseCaseTest.kt
     │   ├── EndShiftUseCaseTest.kt
-    │   └── CheckLegalLimitsUseCaseTest.kt
-    └── repository/
-        └── ShiftRepositoryTest.kt
-
-app/src/androidTest/java/com/drivershield/   # Instrumented tests  [pendiente]
-    └── service/
-        └── TimerServiceTest.kt
+    │   ├── GenerateReportUseCaseTest.kt
+    │   └── ToggleDayOverrideUseCaseTest.kt
+    └── util/
+        ├── CycleCalculatorTest.kt
+        ├── NightShiftSplitterTest.kt
+        └── WorkLimitsTest.kt
 ```
 
 ---
@@ -242,19 +276,19 @@ Almacenado en Preferences DataStore, **no en Room** — lectura de cero latencia
 Pulsación larga "Iniciar turno"
     │
     ▼
-DashboardViewModel.startShift()
+MainViewModel.startShift()
     ├─► StartShiftUseCase → Room INSERT + DataStore
     └─► startForegroundService(TimerService)
             ├─► PARTIAL_WAKE_LOCK ("drivershield:timer")
             ├─► startForeground(NOTIF_ID, buildNotification())
             ├─► corrutina ticker (1s, Dispatchers.IO)
-            └─► emite TimerState via StateFlow
+            └─► emite TimerState via StateFlow (TimerStateManager)
 
 Pulsación larga "Finalizar turno" (1 500 ms)
     │
     ▼
-DashboardViewModel.endShift()
-    ├─► EndShiftUseCase → Room UPDATE + WeeklyAggregateRepository.upsert()
+MainViewModel.stopShift()
+    ├─► EndShiftUseCase → Room @Transaction (endTimestamp + isTampered)
     └─► TimerService.stopSelf()
             ├─► libera WakeLock
             ├─► cancela ticker
