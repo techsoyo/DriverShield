@@ -8,6 +8,7 @@ import com.drivershield.data.local.datastore.SessionDataStore
 import com.drivershield.domain.model.EventType
 import com.drivershield.domain.model.ShiftType
 import com.drivershield.domain.model.WorkSchedule
+import com.drivershield.domain.repository.DayOverrideRepository
 import com.drivershield.domain.repository.ScheduleRepository
 import com.drivershield.domain.repository.ShiftRepository
 import com.drivershield.service.ShiftState
@@ -20,9 +21,12 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.time.DayOfWeek
+import java.time.LocalDate
 import javax.inject.Inject
 
 data class MainUiState(
@@ -40,7 +44,8 @@ class MainViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
     private val shiftRepository: ShiftRepository,
     scheduleRepository: ScheduleRepository,
-    sessionDataStore: SessionDataStore
+    sessionDataStore: SessionDataStore,
+    dayOverrideRepository: DayOverrideRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(MainUiState())
@@ -74,6 +79,31 @@ class MainViewModel @Inject constructor(
             started = SharingStarted.WhileSubscribed(5_000),
             initialValue = 0L
         )
+
+    /** Días laborables reales de la semana actual, reactivo a overrides manuales. */
+    val weeklyWorkDays: StateFlow<Int> = run {
+        val today = LocalDate.now()
+        val monday = today.with(DayOfWeek.MONDAY)
+        val sunday = monday.plusDays(6L)
+
+        combine(
+            scheduleRepository.getScheduleFlow(),
+            dayOverrideRepository.getOverridesInRange(monday, sunday)
+        ) { workSchedule, overrides ->
+            val fixedOffDays = workSchedule?.offDays ?: emptyList()
+            val overrideMap = overrides.associateBy { it.date }
+            (0..6).count { offset ->
+                val date = monday.plusDays(offset.toLong())
+                val isFixedOff = fixedOffDays.contains(date.dayOfWeek.value)
+                val override = overrideMap[date]
+                !(override?.isLibranza ?: isFixedOff)
+            }.coerceAtLeast(1)
+        }.stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5_000),
+            initialValue = TimerState.MAX_WEEKLY_MS.let { 5 }
+        )
+    }
 
     init {
         observeServiceState()

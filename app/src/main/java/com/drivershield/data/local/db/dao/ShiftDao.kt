@@ -112,7 +112,8 @@ interface ShiftDao {
 
     /**
      * Gestión de Horas: Función rápida para reabrir un turno cerrado por error.
+     * Pone endTimestamp y durationMs a NULL, dejando la sesión como activa sin cerrar.
      */
-    @Query("UPDATE shift_sessions SET endTimestamp = NULL, durationMs = 0 WHERE id = :id")
+    @Query("UPDATE shift_sessions SET endTimestamp = NULL, durationMs = NULL WHERE id = :id")
     suspend fun reopenSession(id: Long)
 }

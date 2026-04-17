@@ -34,7 +34,7 @@ class ScheduleRepositoryImpl @Inject constructor(
     private fun WorkScheduleEntity.toDomain() = WorkSchedule(
         startTime = startTime,
         endTime = endTime,
-        offDays = offDays.split(",").filter { it.isNotEmpty() }.map { it.toInt() },
+        offDays = offDays.split(",").mapNotNull { it.toIntOrNull() },
         weeklyTargetMs = weeklyTargetMs,
         dailyTargetMs = dailyTargetMs,
         cycleStartEpoch = cycleStartEpoch
