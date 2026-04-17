@@ -1,10 +1,10 @@
 # PRD & Especificación Técnica: Proyecto "DriverShield"
 
-**Versión:** 1.1  
-**Fecha:** 2026-03-31  
+**Versión:** 1.3  
+**Fecha:** 2026-04-17  
 **Rol:** Arquitecto de Software Senior (Kotlin/Android) + Orquestador  
 **Metodología:** AI-First Estricto · Clean Architecture · MVVM · Plan Mode  
-**Estado:** ACTIVO — estructura de carpetas y stubs creados (Paso 3 completado)
+**Estado:** ✅ COMPLETADO — tests verdes · BUILD SUCCESSFUL · tema CASIO · Day Overrides implementado
 
 ---
 
@@ -188,6 +188,24 @@ data class ShiftSessionEntity(
 ```
 
 Índices: `(isoYear, isoWeekNumber)` para queries semanales · `(startTimestamp)` para histórico
+
+**`day_overrides`** — Overrides manuales del calendario de libranzas
+
+```kotlin
+@Entity(tableName = "day_overrides")
+data class DayOverrideEntity(
+    @PrimaryKey
+    val date: LocalDate,          // Fecha afectada (zona local del dispositivo)
+    val isLibranza: Boolean       // true = libranza, false = forzar como laborable
+)
+```
+
+Un override tiene prioridad sobre `WorkSchedule.offDays`. `ToggleDayOverrideUseCase`
+lo elimina cuando el nuevo estado coincide con el estado fijo — sin filas redundantes.
+`NightShiftSplitter` usa la fecha del `startTimestamp` de cada sesión para distribuir
+las horas nocturnas correctamente entre días naturales al generar informes.
+
+---
 
 **`weekly_aggregates`** — Resumen acumulado por semana ISO
 
@@ -388,7 +406,7 @@ lint  →  unit-tests  →  build  →  release-please
 
 | Job              | Trigger              | Acción                                                        |
 |------------------|----------------------|---------------------------------------------------------------|
-| `lint`           | push / PR            | `./gradlew ktlintCheck`                                       |
+| `lint`           | push / PR            | `./gradlew lintDebug` (Android Lint — reemplazó ktlint)       |
 | `unit-tests`     | tras lint            | `./gradlew testDebugUnitTest` + reporte en PR                 |
 | `build`          | tras tests           | `./gradlew assembleDebug` + artefacto APK (7 días)            |
 | `release-please` | push a `main`        | CHANGELOG + bump semántico + tag `vX.Y.Z`                     |
@@ -402,7 +420,9 @@ lint  →  unit-tests  →  build  →  release-please
 | # | Decisión                          | Resolución                                                                          |
 |---|-----------------------------------|-------------------------------------------------------------------------------------|
 | 1 | ¿Soporte multiusuario?            | **No** (MVP) — un conductor por dispositivo                                         |
-| 2 | ¿Exportación de datos?            | **Sí, v1.1** — `ExportRepository` creado como interfaz; implementación pendiente    |
-| 3 | ¿Sincronización en la nube?       | **No** (MVP) — sin capa de red, sin Firebase                                        |
+| 2 | ¿Exportación de datos?            | **Sí, v1.0** — PDF con hash SHA-256 + CSV con epoch timestamps, ambos implementados |
+| 3 | ¿Sincronización en la nube?       | **No** — sin capa de red, sin Firebase                                              |
 | 4 | API mínima                        | **26 (Android 8.0)** — `java.time` nativo, `setExactAndAllowWhileIdle()`            |
-| 5 | ¿Widget de pantalla de inicio?    | **Sí, v1.1** — `AppWidgetProvider.kt` creado como stub reservado                    |
+| 5 | ¿Widget de pantalla de inicio?    | **No** (v1.0) — reservado para versión futura                                       |
+| 6 | ¿Tema visual?                     | **CASIO 80's** — LCD `#9BA591`, resina `#212121`, fuente Digital7, bordes `2.dp`    |
+| 7 | ¿Toggle libre de libranzas?       | **Sí** — el conductor puede cambiar cualquier día sin restricción de días mínimos   |
